@@ -113,6 +113,10 @@ func (p *Peer2PeerBackend) AddLocalInput(player ggponet.GGPOPlayerHandle, values
 	return ggponet.GGPO_OK
 }
 
+func (p *Peer2PeerBackend) DoPoll(timeout int64) ggponet.GGPOErrorCode {
+	return ggponet.GGPO_OK
+}
+
 func (p *Peer2PeerBackend) IncrementFrame(value byte) ggponet.GGPOErrorCode {
 	return ggponet.GGPO_OK
 }

@@ -23,7 +23,7 @@ type InputQueue struct {
 	FirstIncorrectFrame int64
 	LastFrameRequested  int64
 	FrameDelay          int64
-	Inputs              [INPUT_QUEUE_LENGTH]GameInput
+	Inputs              []GameInput
 	Prediction          GameInput
 }
 
@@ -38,7 +38,7 @@ func (i *InputQueue) Init(id int64, inputSize int64) {
 	i.FirstIncorrectFrame = NULL_FRAME
 	i.LastFrameRequested = NULL_FRAME
 	i.LastAddedFrame = NULL_FRAME
-	i.Inputs = [INPUT_QUEUE_LENGTH]GameInput{}
+	i.Inputs = make([]GameInput, INPUT_QUEUE_LENGTH)
 
 	i.Prediction.SimpleInit(NULL_FRAME, nil, inputSize)
 
