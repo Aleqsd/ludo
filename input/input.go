@@ -37,6 +37,9 @@ var (
 	OldState inputstate // input state for the previous frame
 	Released inputstate // keys just released during this frame
 	Pressed  inputstate // keys just pressed during this frame
+
+	localPlayerInput [delay.Delay][20]bool
+	localCount       uint64
 )
 
 // Hot keys
@@ -75,6 +78,8 @@ var vid *video.Video
 func Init(v *video.Video) {
 	vid = v
 	glfw.SetJoystickCallback(joystickCallback)
+
+	localPlayerInput = [delay.Delay][20]bool{}
 }
 
 // Resets all retropad buttons to false
@@ -186,8 +191,6 @@ func getPressedReleased(new inputstate, old inputstate) (inputstate, inputstate)
 func Poll() {
 	log.Println("poll")
 
-	NewState = pollJoypads(NewState)
-	NewState = pollKeyboard(NewState)
 	Pressed, Released = getPressedReleased(NewState, OldState)
 
 	// Store the old input state for comparisions
@@ -196,15 +199,28 @@ func Poll() {
 	playerToNet(NewState, 0)
 }
 
+// Set the NewState at false everywhere
 func Reset() {
 	NewState = reset(NewState)
 }
 
+// Get the remote player queue and the localPlayerInput
 func DeQueue() {
 	log.Println("DeQueue")
 
-	playerInput := <-delay.InputQueue
-	NewState[1] = playerInput
+	remotePlayerInput := <-delay.RemoteInputQueue
+	NewState[0] = localPlayerInput[localCount%delay.Delay]
+	NewState[1] = remotePlayerInput
+}
+
+// Get the local input into localPlayerInput
+func LocalInputs() {
+	var st inputstate
+	st = reset(st)
+	st = pollJoypads(st)
+	st = pollKeyboard(st)
+	localPlayerInput[localCount%delay.Delay] = st[0]
+	localCount++
 }
 
 // State is a callback passed to core.SetInputState

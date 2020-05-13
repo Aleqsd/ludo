@@ -40,12 +40,13 @@ func runLoop(vid *video.Video, m *menu.Menu) {
 			log.Println(delay.Count)
 
 			input.Reset()
+			input.LocalInputs()
 
-			if state.Global.CoreRunning && delay.Count <= 9 {
+			if state.Global.CoreRunning && delay.Count < delay.Delay {
 				input.Poll()
 			}
 
-			if state.Global.CoreRunning && delay.Count > 9 {
+			if state.Global.CoreRunning && delay.Count >= delay.Delay {
 				input.DeQueue()
 				state.Global.Core.Run()
 				if state.Global.Core.FrameTimeCallback != nil {

@@ -6,12 +6,14 @@ import (
 	"github.com/libretro/ludo/netplay"
 )
 
-var InputQueue chan [20]bool
+var RemoteInputQueue chan [20]bool
 
 var Count uint64
 
+const Delay = 10
+
 func init() {
-	InputQueue = make(chan [20]bool, 60)
+	RemoteInputQueue = make(chan [20]bool, 60)
 }
 
 func ReceiveInputs() {
@@ -35,6 +37,6 @@ func ReceiveInputs() {
 			}
 		}
 
-		InputQueue <- playerInput
+		RemoteInputQueue <- playerInput
 	}
 }
