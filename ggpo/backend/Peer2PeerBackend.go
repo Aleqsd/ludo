@@ -12,15 +12,10 @@ const (
 	DEFAULT_DISCONNECT_NOTIFY_START = 750
 )
 
-type ConnectStatus struct {
-	Disconnected uint64
-	LastFrame    int64
-}
-
 type Peer2PeerBackend struct {
 	//Poll                  _poll;
 	//UdpProtocol           _spectators[ggponet.GGPO_MAX_SPECTATORS];
-	LocalConnectStatus    []ConnectStatus
+	LocalConnectStatus    []ggponet.ConnectStatus
 	Netplay               network.Netplay
 	Endpoints             []ggponet.GGPOPlayer
 	Sync                  lib.Sync
@@ -44,10 +39,10 @@ func (p *Peer2PeerBackend) Init(cb ggponet.GGPOSessionCallbacks, gamename string
 	config.InputSize = p.InputSize
 	config.Callbacks = p.Callbacks
 	config.NumPredictionFrames = lib.MAX_PREDICTION_FRAMES
-	p.Sync.Init(config)
+	p.Sync.Init(config, p.LocalConnectStatus)
 
 	p.Endpoints = make([]ggponet.GGPOPlayer, p.NumPlayers)
-	p.LocalConnectStatus = make([]ConnectStatus, p.NumPlayers)
+	p.LocalConnectStatus = make([]ggponet.ConnectStatus, p.NumPlayers)
 	for i := 0; i < len(p.LocalConnectStatus); i++ {
 		p.LocalConnectStatus[i].LastFrame = -1
 	}
@@ -125,6 +120,22 @@ func (p *Peer2PeerBackend) AddLocalInput(player ggponet.GGPOPlayerHandle, values
 	return ggponet.GGPO_OK
 }
 
+func (p *Peer2PeerBackend) SyncInput(values []byte, size int64, disconnectFlags *int64) ggponet.GGPOErrorCode {
+	var flags int64
+
+	// Wait until we've started to return inputs
+	if p.Synchronizing {
+		return ggponet.GGPO_ERRORCODE_NOT_SYNCHRONIZED
+	}
+
+	flags = p.Sync.SynchronizeInputs(values, size)
+	if *disconnectFlags != 0 {
+		*disconnectFlags = flags
+	}
+
+	return ggponet.GGPO_OK
+}
+
 func (p *Peer2PeerBackend) DoPoll(timeout int64) ggponet.GGPOErrorCode {
 	return ggponet.GGPO_OK
 }
@@ -133,7 +144,7 @@ func (p *Peer2PeerBackend) IncrementFrame(value byte) ggponet.GGPOErrorCode {
 	return ggponet.GGPO_OK
 }
 
-func (p *Peer2PeerBackend) DisconnectPlayer(handle ggponet.GGPOPlayerHandle) ggponet.GGPOErrorCode {
+func (p *Peer2PeerBackend) DisconnectPlayer(player ggponet.GGPOPlayerHandle) ggponet.GGPOErrorCode {
 	return ggponet.GGPO_OK
 }
 

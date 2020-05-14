@@ -11,7 +11,7 @@ type GGPOSession interface {
 	DoPoll(timeout int64) GGPOErrorCode
 	AddPlayer(player *GGPOPlayer, handle *GGPOPlayerHandle) GGPOErrorCode
 	AddLocalInput(player GGPOPlayerHandle, values []byte, size int64) GGPOErrorCode
-	//SyncInput(values []byte, size int64, disconnect_flags *int64) GGPOErrorCode
+	SyncInput(values []byte, size int64, disconnectFlags *int64) GGPOErrorCode
 	IncrementFrame(value byte) GGPOErrorCode
 	//Chat(text string) GGPOErrorCode
 	DisconnectPlayer(handle GGPOPlayerHandle) GGPOErrorCode
@@ -136,7 +136,6 @@ type sync struct {
 	RemoteFramesBehind int64
 }
 
-
 /*
  * The GGPOSessionCallbacks structure contains the callback functions that
  * your application must implement. GGPO.net will periodically call these
@@ -155,4 +154,9 @@ type GGPOSessionCallbacks interface {
 type GGPONetworkStats struct {
 	Network  network
 	TimeSync sync
+}
+
+type ConnectStatus struct {
+	Disconnected uint64
+	LastFrame    int64
 }

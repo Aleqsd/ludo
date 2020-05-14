@@ -4,6 +4,18 @@ import "github.com/libretro/ludo/ggpo/ggponet"
 
 const MAX_PREDICTION_FRAMES = 8
 
+type Sync struct {
+	Rollingback         bool
+	LastConfirmedFrame  int64
+	FrameCount          int64
+	MaxPredictionFrames int64
+	SavedState          SavedState
+	InputQueues         []InputQueue
+	Config              Config
+	Callbacks           ggponet.GGPOSessionCallbacks
+	LocalConnectStatus  []ggponet.ConnectStatus
+}
+
 type SavedFrame struct {
 	buf      *byte
 	cbuf     int64
@@ -35,22 +47,12 @@ type Event struct {
 	Input          GameInput
 }
 
-type Sync struct {
-	Rollingback         bool
-	LastConfirmedFrame  int64
-	FrameCount          int64
-	MaxPredictionFrames int64
-	SavedState          SavedState
-	InputQueues         []InputQueue
-	Config              Config
-	Callbacks           ggponet.GGPOSessionCallbacks
-}
-
-func (s *Sync) Init(config Config) {
+func (s *Sync) Init(config Config, ConnectStatus []ggponet.ConnectStatus) {
 	s.Config = config
 	s.Callbacks = config.Callbacks
 	s.FrameCount = 0
 	s.Rollingback = false
+	s.LocalConnectStatus = ConnectStatus
 
 	s.MaxPredictionFrames = config.NumPredictionFrames
 
@@ -85,6 +87,25 @@ func (s *Sync) AddLocalInput(queue int64, input *GameInput) bool {
 	s.InputQueues[queue].AddInput(input)
 
 	return true
+}
+
+func (s *Sync) SynchronizeInputs(values []byte, size int64) int64 {
+	var disconnectedFlags int64 = 0
+	output := values
+
+	output = make([]byte, size)
+	for i := 0; i < int(s.Config.NumPlayers); i++ {
+		var input GameInput
+		if s.LocalConnectStatus[i].Disconnected == 1 && s.FrameCount > s.LocalConnectStatus[i].LastFrame {
+			disconnectedFlags += 1 << i
+			input.Bits = nil
+		} else {
+			s.InputQueues[i].GetInput(s.FrameCount, &input)
+		}
+		output = make([]byte, len(input.Bits)*i+len(output))
+		output = input.Bits
+	}
+	return disconnectedFlags
 }
 
 // SaveCurrentFrame write everything into the head, then advance the head pointer

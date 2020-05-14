@@ -46,3 +46,10 @@ func Idle(ggpo *ggponet.GGPOSession, timeout int64) ggponet.GGPOErrorCode {
 	}
 	return (*ggpo).DoPoll(timeout)
 }
+
+func SynchronizeInput(ggpo *ggponet.GGPOSession, values *[]byte, size int64, disconnectFlags *int64) ggponet.GGPOErrorCode {
+	if ggpo == nil {
+		return ggponet.GGPO_ERRORCODE_INVALID_SESSION
+	}
+	return (*ggpo).SyncInput(*values, size, disconnectFlags)
+}
