@@ -60,20 +60,26 @@ func (p *Peer2PeerBackend) AddPlayer(player *ggponet.GGPOPlayer, handle *ggponet
 	*handle = p.QueueToPlayerHandle(queue)
 
 	if player.Type == ggponet.GGPO_PLAYERTYPE_LOCAL {
-		p.JoinRemotePlayer(queue)
+		return p.JoinRemotePlayer(queue)
 	}
 
 	return ggponet.GGPO_OK
 }
 
-func (p *Peer2PeerBackend) JoinRemotePlayer(queue int64) {
+func (p *Peer2PeerBackend) JoinRemotePlayer(queue int64) ggponet.GGPOErrorCode {
 	p.Netplay.Init(p.Endpoints[queue], p.Endpoints[0])
 	if queue == 0 {
-		p.Netplay.HostConnection()
+		if !p.Netplay.HostConnection() {
+			return ggponet.GGPO_ERRORCODE_PLAYER_DISCONNECTED
+		}
 	} else {
-		p.Netplay.JoinConnection()
+		if !p.Netplay.JoinConnection() {
+			return ggponet.GGPO_ERRORCODE_PLAYER_DISCONNECTED
+		}
 	}
 	p.Synchronizing = true
+
+	return ggponet.GGPO_OK
 }
 
 func (p *Peer2PeerBackend) AddLocalInput(player ggponet.GGPOPlayerHandle, values []byte, size int64) ggponet.GGPOErrorCode {
