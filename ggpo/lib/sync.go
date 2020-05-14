@@ -1,6 +1,10 @@
 package lib
 
-import "github.com/libretro/ludo/ggpo/ggponet"
+import (
+	"unsafe"
+
+	"github.com/libretro/ludo/ggpo/ggponet"
+)
 
 const MAX_PREDICTION_FRAMES = 8
 
@@ -108,6 +112,47 @@ func (s *Sync) SynchronizeInputs(values []byte, size int64) int64 {
 	return disconnectedFlags
 }
 
+func (s *Sync) AdjustSimulation(seekTo int64) {
+	count := s.FrameCount - seekTo
+
+	s.Rollingback = true
+
+	// Flush our input queue and load the last frame
+	s.LoadFrame(seekTo)
+
+	//Advance frame by frame (stuffign notifications back to master)
+	s.ResetPrediction(s.FrameCount)
+	for i := 0; i < int(count); i++ {
+		s.Callbacks.AdvanceFrame(0)
+	}
+
+	s.Rollingback = false
+}
+
+func (s *Sync) LoadFrame(frame int64) {
+
+	// Find the frame in question
+	if frame == s.FrameCount {
+		return
+	}
+
+	// Move the head pointer back and load it up
+	s.SavedState.head = s.FindSavedFrameIndex(frame)
+
+	//TODO Fix this line
+	//var state *SavedFrame = s.SavedState.frames + s.SavedState.head
+
+	//   Log("=== Loading frame info %d (size: %d  checksum: %08x).\n",state->frame, state->cbuf, state->checksum);
+
+	//s.Callbacks.LoadGameState(state.buf, state.cbuf)
+
+	// Reset framecount and the head of the state ring-buffer to point in
+	// advance of the current frame (as if we had just finished executing it).
+
+	//s.FrameCount = state.frame
+	s.SavedState.head = s.SavedState.head + 1%int64(unsafe.Sizeof(s.SavedState.frames))
+}
+
 // SaveCurrentFrame write everything into the head, then advance the head pointer
 func (s *Sync) SaveCurrentFrame() {
 	var state *SavedFrame = &s.SavedState.frames[s.SavedState.head]
@@ -122,6 +167,20 @@ func (s *Sync) SaveCurrentFrame() {
 	s.SavedState.head = (s.SavedState.head + 1) % int64(len(s.SavedState.frames))
 }
 
+func (s *Sync) FindSavedFrameIndex(frame int64) int64 {
+	var i int64 = int64(unsafe.Sizeof(s.SavedState.frames))
+	var count int64 = int64(unsafe.Sizeof(s.SavedState.frames))
+	for i = 0; i < count; i++ {
+		if s.SavedState.frames[i].frame == frame {
+			break
+		}
+	}
+	if i == count {
+		panic("FindSavedFrameIndex i = count")
+	}
+	return i
+}
+
 func (s *Sync) CreateQueues(config Config) bool {
 	s.InputQueues = make([]InputQueue, config.NumPlayers)
 
@@ -129,4 +188,10 @@ func (s *Sync) CreateQueues(config Config) bool {
 		s.InputQueues[i].Init(int64(i), s.Config.InputSize)
 	}
 	return true
+}
+
+func (s *Sync) ResetPrediction(frameNumber int64) {
+	for i := 0; i < int(s.Config.NumPlayers); i++ {
+		s.InputQueues[i].ResetPrediction(frameNumber)
+	}
 }
