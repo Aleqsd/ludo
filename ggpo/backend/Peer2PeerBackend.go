@@ -12,9 +12,15 @@ const (
 	DEFAULT_DISCONNECT_NOTIFY_START = 750
 )
 
+type ConnectStatus struct {
+	Disconnected uint64
+	LastFrame    int64
+}
+
 type Peer2PeerBackend struct {
 	//Poll                  _poll;
 	//UdpProtocol           _spectators[ggponet.GGPO_MAX_SPECTATORS];
+	LocalConnectStatus    []ConnectStatus
 	Netplay               network.Netplay
 	Endpoints             []ggponet.GGPOPlayer
 	Sync                  lib.Sync
@@ -39,12 +45,14 @@ func (p *Peer2PeerBackend) Init(cb ggponet.GGPOSessionCallbacks, gamename string
 	config.Callbacks = p.Callbacks
 	config.NumPredictionFrames = lib.MAX_PREDICTION_FRAMES
 	p.Sync.Init(config)
-	p.Endpoints = make([]ggponet.GGPOPlayer, p.NumPlayers)
 
-	//TODO: UDP
+	p.Endpoints = make([]ggponet.GGPOPlayer, p.NumPlayers)
+	p.LocalConnectStatus = make([]ConnectStatus, p.NumPlayers)
+	for i := 0; i < len(p.LocalConnectStatus); i++ {
+		p.LocalConnectStatus[i].LastFrame = -1
+	}
 
 	p.Callbacks.BeginGame(gamename)
-
 }
 
 func (p *Peer2PeerBackend) AddPlayer(player *ggponet.GGPOPlayer, handle *ggponet.GGPOPlayerHandle) ggponet.GGPOErrorCode {
@@ -102,27 +110,16 @@ func (p *Peer2PeerBackend) AddLocalInput(player ggponet.GGPOPlayerHandle, values
 	input.SimpleInit(-1, values, size)
 
 	// Feed the input for the current frame into the synchronzation layer.
-	if !p.Sync.AddLocalInput(queue, input) {
+	if !p.Sync.AddLocalInput(queue, &input) {
 		return ggponet.GGPO_ERRORCODE_PREDICTION_THRESHOLD
 	}
 
-	//TODO: Handle network
 	if input.Frame != lib.NULL_FRAME {
-		// Update the local connect status state to indicate that we've got a
-		// confirmed local frame for this player.  this must come first so it
-		// gets incorporated into the next packet we send.
-
-		//TODO: Log
 		//Log("setting local connect status for local queue %d to %d", queue, input.frame);
-		//_local_connect_status[queue].last_frame = input.frame;
+		p.LocalConnectStatus[queue].LastFrame = input.Frame
 
 		// Send the input to all the remote players.
-		//TODO: UDP Protocol
-		/*for (int i = 0; i < _num_players; i++) {
-			if (_endpoints[i].IsInitialized()) {
-				_endpoints[i].SendInput(input);
-			}
-		}*/
+		p.Netplay.SendInput(input)
 	}
 
 	return ggponet.GGPO_OK

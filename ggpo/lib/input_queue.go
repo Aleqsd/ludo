@@ -67,7 +67,7 @@ func (i *InputQueue) GetInput(requestedFrame int64, input *GameInput) bool {
 	return true
 }
 
-func (i *InputQueue) AddInput(input GameInput) {
+func (i *InputQueue) AddInput(input *GameInput) {
 	var new_frame int64
 
 	//Log("adding input frame number %d to queue.\n", input.frame);
@@ -76,7 +76,7 @@ func (i *InputQueue) AddInput(input GameInput) {
 
 	new_frame = i.AdvanceQueueHead(input.Frame)
 	if new_frame != NULL_FRAME {
-		i.AddDelayedInputToQueue(input, new_frame)
+		i.AddDelayedInputToQueue(*input, new_frame)
 	}
 
 	input.Frame = new_frame

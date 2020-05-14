@@ -69,7 +69,7 @@ func (s *Sync) GetFrameCount() int64 {
 	return s.FrameCount
 }
 
-func (s *Sync) AddLocalInput(queue int64, input GameInput) bool {
+func (s *Sync) AddLocalInput(queue int64, input *GameInput) bool {
 	framesBehind := s.FrameCount - s.LastConfirmedFrame
 	if s.FrameCount >= s.MaxPredictionFrames && framesBehind >= s.MaxPredictionFrames {
 		//Log("Rejecting input from emulator: reached prediction barrier.\n")
