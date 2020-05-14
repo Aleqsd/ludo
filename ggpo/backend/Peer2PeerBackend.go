@@ -3,6 +3,7 @@ package backend
 import (
 	"github.com/libretro/ludo/ggpo/ggponet"
 	"github.com/libretro/ludo/ggpo/lib"
+	"github.com/libretro/ludo/ggpo/network"
 )
 
 const (
@@ -13,9 +14,9 @@ const (
 
 type Peer2PeerBackend struct {
 	//Poll                  _poll;
-	//Udp                   _udp;
-	//UdpProtocol           *_endpoints;
 	//UdpProtocol           _spectators[ggponet.GGPO_MAX_SPECTATORS];
+	Netplay               network.Netplay
+	Endpoints             []ggponet.GGPOPlayer
 	Sync                  lib.Sync
 	InputSize             int64
 	NumPlayers            int64
@@ -38,6 +39,7 @@ func (p *Peer2PeerBackend) Init(cb ggponet.GGPOSessionCallbacks, gamename string
 	config.Callbacks = p.Callbacks
 	config.NumPredictionFrames = lib.MAX_PREDICTION_FRAMES
 	p.Sync.Init(config)
+	p.Endpoints = make([]ggponet.GGPOPlayer, p.NumPlayers)
 
 	//TODO: UDP
 
@@ -51,19 +53,26 @@ func (p *Peer2PeerBackend) AddPlayer(player *ggponet.GGPOPlayer, handle *ggponet
 	}
 
 	queue := player.PlayerNum - 1
+	p.Endpoints[queue] = *player
 	if player.PlayerNum < 1 || player.PlayerNum > p.NumPlayers {
 		return ggponet.GGPO_ERRORCODE_PLAYER_OUT_OF_RANGE
 	}
 	*handle = p.QueueToPlayerHandle(queue)
 
-	if player.Type == ggponet.GGPO_PLAYERTYPE_REMOTE {
-		p.AddRemotePlayer(player.IPAddress, player.Port, queue)
+	if player.Type == ggponet.GGPO_PLAYERTYPE_LOCAL {
+		p.JoinRemotePlayer(queue)
 	}
 
 	return ggponet.GGPO_OK
 }
 
-func (p *Peer2PeerBackend) AddRemotePlayer(ip string, port uint8, queue int64) {
+func (p *Peer2PeerBackend) JoinRemotePlayer(queue int64) {
+	p.Netplay.Init(p.Endpoints[queue], p.Endpoints[0])
+	if queue == 0 {
+		p.Netplay.HostConnection()
+	} else {
+		p.Netplay.JoinConnection()
+	}
 	p.Synchronizing = true
 }
 

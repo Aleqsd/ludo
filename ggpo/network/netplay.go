@@ -1,6 +1,7 @@
 package network
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/libretro/ludo/ggpo/ggponet"
@@ -8,17 +9,19 @@ import (
 )
 
 type Netplay struct {
-	Callbacks ggponet.GGPOSessionCallbacks
-	Poll      lib.Poll
-	Conn      net.Conn
-	Player    string
+	Callbacks     ggponet.GGPOSessionCallbacks
+	Poll          lib.Poll
+	Conn          net.Conn
+	LocalPlayer   ggponet.GGPOPlayer
+	HostingPlayer ggponet.GGPOPlayer
 }
 
-func (n *Netplay) Init(player string, poll lib.Poll, callbacks ggponet.GGPOSessionCallbacks) {
-	n.Callbacks = callbacks
-	n.Poll = poll
+func (n *Netplay) Init(localPlayer ggponet.GGPOPlayer, hostingPlayer ggponet.GGPOPlayer /*, poll lib.Poll, callbacks ggponet.GGPOSessionCallbacks*/) {
+	//n.Callbacks = callbacks
+	//n.Poll = poll
 	//n.Poll.RegisterLoop(n)
-	n.Player = player
+	n.LocalPlayer = localPlayer
+	n.HostingPlayer = hostingPlayer
 
 	//Log("binding udp socket to port %d.\n", port);
 }
@@ -40,7 +43,7 @@ func (n *Netplay) ReadInput() {
 }
 
 func (n *Netplay) HostConnection() bool {
-	ln, err := net.Listen("tcp", n.Player)
+	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", n.LocalPlayer.IPAddress, int(n.LocalPlayer.Port)))
 	if err != nil {
 		return false
 	}
@@ -55,7 +58,7 @@ func (n *Netplay) HostConnection() bool {
 
 func (n *Netplay) JoinConnection() bool {
 	var err error
-	n.Conn, err = net.Dial("tcp", n.Player)
+	n.Conn, err = net.Dial("tcp", fmt.Sprintf("%s:%d", n.LocalPlayer.IPAddress, int(n.LocalPlayer.Port)))
 	if err != nil {
 		return false
 	}
