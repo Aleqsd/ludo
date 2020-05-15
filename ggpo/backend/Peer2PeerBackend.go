@@ -145,7 +145,45 @@ func (p *Peer2PeerBackend) IncrementFrame(value byte) ggponet.GGPOErrorCode {
 }
 
 func (p *Peer2PeerBackend) DisconnectPlayer(player ggponet.GGPOPlayerHandle) ggponet.GGPOErrorCode {
+	var queue int64
+	var result ggponet.GGPOErrorCode
+
+	result = p.PlayerHandleToQueue(player, &queue)
+	if !ggponet.GGPO_SUCCEEDED(result) {
+		return result
+	}
+
+	if p.LocalConnectStatus[queue].Disconnected == 1 {
+		return ggponet.GGPO_ERRORCODE_PLAYER_DISCONNECTED
+	}
+
+	currentFrame := p.Sync.GetFrameCount()
+	//log.Logger("Disconnecting local player %d at frame %d by user request.\n", queue, p.LocalConnectStatus[queue].LastFrame)
+	var i int64 = 0
+	for ; i < p.NumPlayers; i++ {
+		p.DisconnectPlayerQueue(i, currentFrame)
+	}
+
 	return ggponet.GGPO_OK
+}
+
+func (p *Peer2PeerBackend) DisconnectPlayerQueue(queue int64, syncto int64) {
+	var info ggponet.GGPOEvent
+	framecount := p.Sync.GetFrameCount()
+
+	//TODO Disconnect()
+	//p.Endpoints[queue].Disconnect()
+
+	p.LocalConnectStatus[queue].Disconnected = 1
+	p.LocalConnectStatus[queue].LastFrame = syncto
+
+	if syncto < framecount {
+		p.Sync.AdjustSimulation(syncto)
+	}
+
+	info.Code = ggponet.GGPO_EVENTCODE_DISCONNECTED_FROM_PEER
+	info.Disconnected.Player = p.QueueToPlayerHandle(queue)
+	p.Callbacks.OnEvent(&info)
 }
 
 func (p *Peer2PeerBackend) QueueToPlayerHandle(queue int64) ggponet.GGPOPlayerHandle {
