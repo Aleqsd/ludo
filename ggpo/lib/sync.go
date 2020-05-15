@@ -139,17 +139,16 @@ func (s *Sync) LoadFrame(frame int64) {
 	// Move the head pointer back and load it up
 	s.SavedState.head = s.FindSavedFrameIndex(frame)
 
-	//TODO Fix this line
-	//var state *SavedFrame = s.SavedState.frames + s.SavedState.head
+	var state *SavedFrame = &s.SavedState.frames[s.SavedState.head]
 
 	//   Log("=== Loading frame info %d (size: %d  checksum: %08x).\n",state->frame, state->cbuf, state->checksum);
 
-	//s.Callbacks.LoadGameState(state.buf, state.cbuf)
+	s.Callbacks.LoadGameState(state.buf, state.cbuf)
 
 	// Reset framecount and the head of the state ring-buffer to point in
 	// advance of the current frame (as if we had just finished executing it).
 
-	//s.FrameCount = state.frame
+	s.FrameCount = state.frame
 	s.SavedState.head = s.SavedState.head + 1%int64(unsafe.Sizeof(s.SavedState.frames))
 }
 

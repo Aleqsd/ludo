@@ -172,6 +172,7 @@ func (p *Peer2PeerBackend) DisconnectPlayerQueue(queue int64, syncto int64) {
 	framecount := p.Sync.GetFrameCount()
 
 	//TODO Disconnect()
+	//Revoir la logique
 	//p.Endpoints[queue].Disconnect()
 
 	p.LocalConnectStatus[queue].Disconnected = 1
