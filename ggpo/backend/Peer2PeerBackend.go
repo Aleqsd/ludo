@@ -144,6 +144,10 @@ func (p *Peer2PeerBackend) IncrementFrame(value byte) ggponet.GGPOErrorCode {
 	return ggponet.GGPO_OK
 }
 
+func (p *Peer2PeerBackend) DisconnectLocalPlayer() ggponet.GGPOErrorCode {
+	return p.Netplay.Disconnect()
+}
+
 func (p *Peer2PeerBackend) DisconnectPlayer(player ggponet.GGPOPlayerHandle) ggponet.GGPOErrorCode {
 	var queue int64
 	var result ggponet.GGPOErrorCode

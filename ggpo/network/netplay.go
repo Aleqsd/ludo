@@ -133,3 +133,11 @@ func (n *Netplay) JoinConnection() bool {
 	}
 	return true
 }
+
+func (n *Netplay) Disconnect() ggponet.GGPOErrorCode {
+	n.Conn.Close()
+	if n.Conn == nil {
+		return ggponet.GGPO_OK
+	}
+	return ggponet.GGPO_ERRORCODE_PLAYER_DISCONNECTED
+}
