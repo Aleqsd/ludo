@@ -60,3 +60,17 @@ func DisconnectPlayer(ggpo *ggponet.GGPOSession) ggponet.GGPOErrorCode {
 	}
 	return (*ggpo).DisconnectLocalPlayer()
 }
+
+func AdvanceFrame(ggpo *ggponet.GGPOSession) ggponet.GGPOErrorCode {
+	if ggpo == nil {
+		return ggponet.GGPO_ERRORCODE_INVALID_SESSION
+	}
+	return (*ggpo).IncrementFrame()
+}
+
+func GetNetworkStats(ggpo *ggponet.GGPOSession, player ggponet.GGPOPlayerHandle, stats *ggponet.GGPONetworkStats) ggponet.GGPOErrorCode {
+	if ggpo == nil {
+		return ggponet.GGPO_ERRORCODE_INVALID_SESSION
+	}
+	return (*ggpo).GetNetworkStats(stats, player)
+}

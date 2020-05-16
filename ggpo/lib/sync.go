@@ -112,6 +112,11 @@ func (s *Sync) SynchronizeInputs(values []byte, size int64) int64 {
 	return disconnectedFlags
 }
 
+func (s *Sync) IncrementFrame() {
+	s.FrameCount++
+	s.SaveCurrentFrame()
+}
+
 func (s *Sync) AdjustSimulation(seekTo int64) {
 	count := s.FrameCount - seekTo
 

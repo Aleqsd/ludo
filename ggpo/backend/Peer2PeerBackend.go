@@ -140,7 +140,7 @@ func (p *Peer2PeerBackend) DoPoll(timeout int64) ggponet.GGPOErrorCode {
 	return ggponet.GGPO_OK
 }
 
-func (p *Peer2PeerBackend) IncrementFrame(value byte) ggponet.GGPOErrorCode {
+func (p *Peer2PeerBackend) IncrementFrame() ggponet.GGPOErrorCode {
 	return ggponet.GGPO_OK
 }
 
@@ -193,6 +193,21 @@ func (p *Peer2PeerBackend) DisconnectPlayerQueue(queue int64, syncto int64) {
 
 func (p *Peer2PeerBackend) QueueToPlayerHandle(queue int64) ggponet.GGPOPlayerHandle {
 	return (ggponet.GGPOPlayerHandle)(queue + 1)
+}
+
+func (p *Peer2PeerBackend) GetNetworkStats(stats *ggponet.GGPONetworkStats, player ggponet.GGPOPlayerHandle) ggponet.GGPOErrorCode {
+	var queue int64
+	var result ggponet.GGPOErrorCode
+
+	result = p.PlayerHandleToQueue(player, &queue)
+	if !ggponet.GGPO_SUCCEEDED(result) {
+		return result
+	}
+
+	//stats = make([]byte, unsafe.Sizeof(*stats))
+	//p.Endpoints[queue].GetNetworkStats(stats)
+
+	return ggponet.GGPO_OK
 }
 
 func (p *Peer2PeerBackend) SetFrameDelay(player ggponet.GGPOPlayerHandle, delay int64) ggponet.GGPOErrorCode {

@@ -12,11 +12,11 @@ type GGPOSession interface {
 	AddPlayer(player *GGPOPlayer, handle *GGPOPlayerHandle) GGPOErrorCode
 	AddLocalInput(player GGPOPlayerHandle, values []byte, size int64) GGPOErrorCode
 	SyncInput(values []byte, size int64, disconnectFlags *int64) GGPOErrorCode
-	IncrementFrame(value byte) GGPOErrorCode
+	IncrementFrame() GGPOErrorCode
 	//Chat(text string) GGPOErrorCode
 	DisconnectLocalPlayer() GGPOErrorCode
 	DisconnectPlayer(handle GGPOPlayerHandle) GGPOErrorCode
-	//GetNetworkStats(stats *GGPONetworkStats, handle GGPOPlayerHandle) GGPOErrorCode
+	GetNetworkStats(stats *GGPONetworkStats, handle GGPOPlayerHandle) GGPOErrorCode
 	//Logv(fmt string, va_list list) GGPOErrorCode
 	SetFrameDelay(player GGPOPlayerHandle, delay int64) GGPOErrorCode
 	//SetDisconnectTimeout(timeout int64) GGPOErrorCode
