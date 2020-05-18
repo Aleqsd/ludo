@@ -63,6 +63,15 @@ func (s *Sync) Init(config Config, ConnectStatus []ggponet.ConnectStatus) {
 	s.CreateQueues(config)
 }
 
+func (s *Sync) SetLastConfirmedFrame(frame int64) {   
+   s.LastConfirmedFrame = frame
+   if s.LastConfirmedFrame > 0 {
+      for i := 0; i < int(s.Config.NumPlayers); i++ {
+         s.InputQueues[i].DiscardConfirmedFrames(frame - 1)
+      }
+   }
+}
+
 func (s *Sync) SetFrameDelay(queue int64, delay int64) {
 	s.InputQueues[queue].SetFrameDelay(delay)
 }
@@ -73,6 +82,27 @@ func (s *Sync) InRollback() bool {
 
 func (s *Sync) GetFrameCount() int64 {
 	return s.FrameCount
+}
+
+func (s *Sync) GetConfirmedInputs(values []byte, size int64, frame int64) int64 {
+	disconnectFlags := 0
+	output := values
+
+	for i := 0; i < int(s.Config.NumPlayers); i++ {
+		var input GameInput
+		if s.LocalConnectStatus[i].Disconnected == 1 && frame > s.LocalConnectStatus[i].LastFrame {
+			disconnectFlags |= (1 << i)
+			input.Erase()
+		} else {
+			s.InputQueues[i].GetConfirmedInput(frame, &input)
+		}
+		for k := 0; k < i*int(s.Config.InputSize); k += int(s.Config.InputSize) {
+			for j := 0; j < int(s.Config.InputSize); j++ {
+				output[k+j] = input.Bits[j]
+			}
+		}
+	}
+	return int64(disconnectFlags)
 }
 
 func (s *Sync) AddLocalInput(queue int64, input *GameInput) bool {
@@ -112,9 +142,35 @@ func (s *Sync) SynchronizeInputs(values []byte, size int64) int64 {
 	return disconnectedFlags
 }
 
+func (s *Sync) CheckSimulation() {
+	var seek_to int64
+	if !s.CheckSimulationConsistency(&seek_to) {
+		s.AdjustSimulation(seek_to)
+	}
+}
+
 func (s *Sync) IncrementFrame() {
 	s.FrameCount++
 	s.SaveCurrentFrame()
+}
+
+func (s *Sync) CheckSimulationConsistency(seekTo *int64) bool {
+	firstIncorrect := NULL_FRAME
+	for i := 0; i < int(s.Config.NumPlayers); i++ {
+		incorrect := s.InputQueues[i].FirstIncorrectFrame
+		//Log("considering incorrect frame %d reported by queue %d.\n", incorrect, i)
+
+		if incorrect != NULL_FRAME && (firstIncorrect == NULL_FRAME || incorrect < int64(firstIncorrect)) {
+			firstIncorrect = int(incorrect)
+		}
+	}
+
+	if firstIncorrect == NULL_FRAME {
+		//Log("prediction ok.  proceeding.\n")
+		return true
+	}
+	*seekTo = int64(firstIncorrect)
+	return false
 }
 
 func (s *Sync) AdjustSimulation(seekTo int64) {
@@ -146,7 +202,7 @@ func (s *Sync) LoadFrame(frame int64) {
 
 	var state *SavedFrame = &s.SavedState.frames[s.SavedState.head]
 
-	//   Log("=== Loading frame info %d (size: %d  checksum: %08x).\n",state->frame, state->cbuf, state->checksum);
+	//Log("=== Loading frame info %d (size: %d  checksum: %08x).\n",state->frame, state->cbuf, state->checksum);
 
 	s.Callbacks.LoadGameState(state.buf, state.cbuf)
 

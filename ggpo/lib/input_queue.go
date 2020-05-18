@@ -52,7 +52,23 @@ func (i *InputQueue) SetFrameDelay(delay int64) {
 }
 
 func (i *InputQueue) DiscardConfirmedFrames(frame int64) {
+	if i.LastFrameRequested != NULL_FRAME {
+		frame = MIN(frame, i.LastFrameRequested)
+	}
 
+	//Log("discarding confirmed frames up to %d (last_added:%d length:%d [head:%d tail:%d]).\n", frame, _last_added_frame, _length, _head, _tail)
+	if frame >= i.LastAddedFrame {
+		i.Tail = i.Head
+	} else {
+		offset := frame - i.Inputs[i.Tail].Frame + 1
+
+		//Log("difference of %d frames.\n", offset);
+
+		i.Tail = (i.Tail + offset) % INPUT_QUEUE_LENGTH
+		i.Length -= offset
+	}
+
+	//Log("after discarding, new tail is %d (frame:%d).\n", _tail, _inputs[_tail].frame)
 }
 
 func (i *InputQueue) ResetPrediction(frame int64) {
@@ -60,6 +76,11 @@ func (i *InputQueue) ResetPrediction(frame int64) {
 }
 
 func (i *InputQueue) GetConfirmedInput(requestedFrame int64, input *GameInput) bool {
+	offset := requestedFrame % INPUT_QUEUE_LENGTH
+	if i.Inputs[offset].Frame != requestedFrame {
+		return false
+	}
+	*input = i.Inputs[offset]
 	return true
 }
 

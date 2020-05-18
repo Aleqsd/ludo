@@ -14,7 +14,7 @@ const (
 
 type Peer2PeerBackend struct {
 	//Poll                  _poll;
-	//UdpProtocol           _spectators[ggponet.GGPO_MAX_SPECTATORS];
+	Spectators            [ggponet.GGPO_MAX_SPECTATORS]network.Netplay
 	LocalConnectStatus    []ggponet.ConnectStatus
 	Endpoints             []network.Netplay
 	Players               []ggponet.GGPOPlayer
@@ -39,11 +39,11 @@ func (p *Peer2PeerBackend) Init(cb ggponet.GGPOSessionCallbacks, gamename string
 	config.InputSize = p.InputSize
 	config.Callbacks = p.Callbacks
 	config.NumPredictionFrames = lib.MAX_PREDICTION_FRAMES
-	p.Sync.Init(config, p.LocalConnectStatus)
 
 	p.Players = make([]ggponet.GGPOPlayer, p.NumPlayers)
 	p.Endpoints = make([]network.Netplay, p.NumPlayers)
 	p.LocalConnectStatus = make([]ggponet.ConnectStatus, p.NumPlayers)
+	p.Sync.Init(config, p.LocalConnectStatus)
 	for i := 0; i < len(p.LocalConnectStatus); i++ {
 		p.LocalConnectStatus[i].LastFrame = -1
 	}
@@ -144,11 +144,92 @@ func (p *Peer2PeerBackend) SyncInput(values []byte, size int64, disconnectFlags 
 	return ggponet.GGPO_OK
 }
 
-func (p *Peer2PeerBackend) DoPoll(timeout int64) ggponet.GGPOErrorCode {
+func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
+	if !p.Sync.InRollback() {
+		//_poll.Pump(0);
+
+		p.PollNetplayEvents()
+
+		if !p.Synchronizing {
+			p.Sync.CheckSimulation()
+
+			// notify all of our endpoints of their local frame number for their
+			// next connection quality report
+			currentFrame := p.Sync.FrameCount
+			for i := 0; i < int(p.NumPlayers); i++ {
+				p.Endpoints[i].SetLocalFrameNumber(currentFrame)
+			}
+
+			var totalMinConfirmed int64
+			if p.NumPlayers <= 2 {
+				totalMinConfirmed = p.Poll2Players(currentFrame)
+			} else {
+				totalMinConfirmed = p.PollNPlayers(currentFrame)
+			}
+
+			//Log("last confirmed frame in p2p backend is %d.\n", totalMinConfirmed);
+			if totalMinConfirmed >= 0 {
+				if p.NumSpectators > 0 {
+					for p.NextSpectatorFrame <= totalMinConfirmed {
+						//Log("pushing frame %d to spectators.\n", p.NextSpectatorFrame)
+
+						var input lib.GameInput
+						input.Frame = p.NextSpectatorFrame
+						input.Size = p.InputSize * p.NumPlayers
+						p.Sync.GetConfirmedInputs(input.Bits, p.InputSize*p.NumPlayers, p.NextSpectatorFrame)
+						for i := 0; i < int(p.NumSpectators); i++ {
+							p.Spectators[i].SendInput(input)
+						}
+						p.NextSpectatorFrame++
+					}
+				}
+				//Log("setting confirmed frame in sync to %d.\n", totalMinConfirmed);
+				p.Sync.SetLastConfirmedFrame(totalMinConfirmed)
+			}
+
+			// send timesync notifications if now is the proper time
+			if currentFrame > p.NextRecommendedSleep {
+				interval := int64(0)
+				for i := 0; i < int(p.NumPlayers); i++ {
+					interval = lib.MAX(interval, p.Endpoints[i].RecommendFrameDelay())
+				}
+
+				if interval > 0 {
+					var info ggponet.GGPOEvent
+					info.Code = ggponet.GGPO_EVENTCODE_TIMESYNC
+					info.TimeSync.FramesAhead = interval
+					p.Callbacks.OnEvent(&info)
+					p.NextRecommendedSleep = currentFrame + RECOMMENDATION_INTERVAL
+				}
+			}
+		}
+	}
 	return ggponet.GGPO_OK
 }
 
+func (p *Peer2PeerBackend) Poll2Players(currentFrame int64) int64 {
+	totalMinConfirmed := int64(lib.MAX_INT)
+	for i := 0; i < int(p.NumPlayers); i++ {
+		queueConnected := p.Endpoints[i].PeerConnectStatus
+
+		if p.LocalConnectStatus[i].Disconnected == 0 {
+			totalMinConfirmed = lib.MIN(p.LocalConnectStatus[i].LastFrame, totalMinConfirmed)
+		}
+		//Log("  local endp: connected = %d, last_received = %d, totalMinConfirmed = %d.\n", !p.LocalConnectStatus[i].Disconnected, p.LocalConnectStatus[i].LastFrame, total_min_confirmed)
+		if !queueConnected && p.LocalConnectStatus[i].Disconnected == 0 {
+			//Log("disconnecting i %d by remote request.\n", i)
+			p.DisconnectPlayerQueue(int64(i), totalMinConfirmed)
+		}
+		//Log("  totalMinConfirmed = %d.\n", totalMinConfirmed)
+	}
+	return totalMinConfirmed
+}
+
 func (p *Peer2PeerBackend) IncrementFrame() ggponet.GGPOErrorCode {
+	p.Sync.IncrementFrame()
+	p.DoPoll()
+	//p.PollSyncEvents();
+
 	return ggponet.GGPO_OK
 }
 

@@ -15,13 +15,17 @@ type Event struct {
 }
 
 type Netplay struct {
-	Callbacks     ggponet.GGPOSessionCallbacks
-	Poll          lib.Poll
-	Conn          *net.UDPConn
-	LocalAddr     *net.UDPAddr
-	RemoteAddr    *net.UDPAddr
-	Queue         int64
-	IsHosting     bool
+	Callbacks           ggponet.GGPOSessionCallbacks
+	Poll                lib.Poll
+	Conn                *net.UDPConn
+	LocalAddr           *net.UDPAddr
+	RemoteAddr          *net.UDPAddr
+	Queue               int64
+	IsHosting           bool
+	LastReceivedInput   lib.GameInput
+	LocalFrameAdvantage int64
+	RoundTripTime       int64
+	PeerConnectStatus   bool
 }
 
 func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64 /*, poll lib.Poll, callbacks ggponet.GGPOSessionCallbacks*/) {
@@ -31,6 +35,8 @@ func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64 /*, poll lib
 	n.LocalAddr, _ = net.ResolveUDPAddr("udp4", "127.0.0.1:8089")
 	n.RemoteAddr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", remotePlayer.IPAddress, int(remotePlayer.Port)))
 	n.Queue = queue
+	n.LastReceivedInput.SimpleInit(-1, nil, 1)
+	n.LocalFrameAdvantage = 0
 
 	//Log("binding udp socket to port %d.\n", port);
 }
@@ -48,15 +54,17 @@ func (n *Netplay) Write(netoutput []byte) {
 	}
 }
 
-func (n *Netplay) Read() {	
+func (n *Netplay) Read() {
 	for {
 		netinput := make([]byte, lib.GAMEINPUT_MAX_BYTES*lib.GAMEINPUT_MAX_PLAYERS)
-		n, _, err := n.Conn.ReadFromUDP(netinput)
+		l, _, err := n.Conn.ReadFromUDP(netinput)
 		if err != nil {
 			fmt.Println(err)
+			n.PeerConnectStatus = false
 			return
 		}
-		fmt.Printf(string(netinput[0:n]))
+		n.PeerConnectStatus = true
+		fmt.Printf(string(netinput[0:l]))
 		//TODO: Créer un channel pour stocker les inputs qui arrivent
 	}
 }
@@ -140,4 +148,9 @@ func (n *Netplay) Disconnect() ggponet.GGPOErrorCode {
 		return ggponet.GGPO_OK
 	}
 	return ggponet.GGPO_ERRORCODE_PLAYER_DISCONNECTED
+}
+
+func (n *Netplay) SetLocalFrameNumber(localFrame int64) {
+	remoteFrame := n.LastReceivedInput.Frame + (n.RoundTripTime * 60 / 1000)
+	n.LocalFrameAdvantage = remoteFrame - localFrame
 }
