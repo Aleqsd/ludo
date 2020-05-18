@@ -17,41 +17,53 @@ type Event struct {
 type Netplay struct {
 	Callbacks     ggponet.GGPOSessionCallbacks
 	Poll          lib.Poll
-	Conn          net.Conn
-	LocalPlayer   ggponet.GGPOPlayer
-	HostingPlayer ggponet.GGPOPlayer
+	Conn          *net.UDPConn
+	LocalAddr     *net.UDPAddr
+	RemoteAddr    *net.UDPAddr
+	Queue         int64
+	IsHosting     bool
 }
 
-func (n *Netplay) Init(localPlayer ggponet.GGPOPlayer, hostingPlayer ggponet.GGPOPlayer /*, poll lib.Poll, callbacks ggponet.GGPOSessionCallbacks*/) {
+func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64 /*, poll lib.Poll, callbacks ggponet.GGPOSessionCallbacks*/) {
 	//n.Callbacks = callbacks
 	//n.Poll = poll
 	//n.Poll.RegisterLoop(n)
-	n.LocalPlayer = localPlayer
-	n.HostingPlayer = hostingPlayer
+	n.LocalAddr, _ = net.ResolveUDPAddr("udp4", "127.0.0.1:8089")
+	n.RemoteAddr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", remotePlayer.IPAddress, int(remotePlayer.Port)))
+	n.Queue = queue
 
 	//Log("binding udp socket to port %d.\n", port);
 }
 
-func (n *Netplay) Write(netoutput []byte) bool {
-	if _, err := n.Conn.Write(netoutput[:]); err != nil {
-		return false
+func (n *Netplay) Write(netoutput []byte) {
+	var err error
+	if n.IsHosting {
+		_, err = n.Conn.WriteToUDP(netoutput, n.RemoteAddr)
+	} else {
+		_, err = n.Conn.Write(netoutput)
 	}
-	return true
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }
 
-func (n *Netplay) Read() {
+func (n *Netplay) Read() {	
 	for {
 		netinput := make([]byte, lib.GAMEINPUT_MAX_BYTES*lib.GAMEINPUT_MAX_PLAYERS)
-		if _, err := n.Conn.Read(netinput[:]); err != nil {
+		n, _, err := n.Conn.ReadFromUDP(netinput)
+		if err != nil {
+			fmt.Println(err)
 			return
 		}
+		fmt.Printf(string(netinput[0:n]))
 		//TODO: Créer un channel pour stocker les inputs qui arrivent
 	}
 }
 
-func (n *Netplay) SendInput(input lib.GameInput) bool {
+func (n *Netplay) SendInput(input lib.GameInput) {
 	inputByte := n.InputToByte(input)
-	return n.Write(inputByte)
+	n.Write(inputByte)
 }
 
 func (n *Netplay) ReceiveInput() Event {
@@ -62,16 +74,10 @@ func (n *Netplay) ReceiveInput() Event {
 }
 
 func (n *Netplay) InputToByte(input lib.GameInput) []byte {
-	playerNumByte := make([]byte, 8)
-	binary.LittleEndian.PutUint64(playerNumByte, uint64(n.LocalPlayer.PlayerNum))
 	frameByte := make([]byte, 8)
 	binary.LittleEndian.PutUint64(frameByte, uint64(input.Frame))
-	inputByte := make([]byte, len(input.Bits)+len(playerNumByte)+len(frameByte))
+	inputByte := make([]byte, len(input.Bits)+len(frameByte))
 	count := 0
-	for i := 0; i < len(playerNumByte); i++ {
-		inputByte[count] = playerNumByte[i]
-		count++
-	}
 	for i := 0; i < len(frameByte); i++ {
 		inputByte[count] = frameByte[i]
 		count++
@@ -83,55 +89,49 @@ func (n *Netplay) InputToByte(input lib.GameInput) []byte {
 	return inputByte
 }
 
-func (n *Netplay) ByteToEvent(inputByte []byte) Event {
+func (n *Netplay) ByteToInput(inputByte []byte) lib.GameInput {
 	input := lib.GameInput{}
 	count := 0
-	playerNumByte := make([]byte, 8)
-	for i := 0; i < len(playerNumByte); i++ {
-		playerNumByte[i] = inputByte[count]
-		count++
-	}
 	frameByte := make([]byte, 8)
 	for i := 0; i < len(frameByte); i++ {
 		frameByte[i] = inputByte[count]
 		count++
 	}
-	bits := make([]byte, len(inputByte)-len(frameByte)-len(playerNumByte))
+	bits := make([]byte, len(inputByte)-len(frameByte))
 	for i := 0; i < len(bits); i++ {
 		bits[i] = inputByte[count]
 		count++
 	}
 
-	playerNum := int64(binary.LittleEndian.Uint64(playerNumByte))
 	frame := int64(binary.LittleEndian.Uint64(frameByte))
 	input.Frame = frame
 	input.Bits = bits
 
-	evt := Event{Input: input, PlayerNum: playerNum}
-	return evt
+	return input
 }
 
-func (n *Netplay) HostConnection() bool {
-	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", n.LocalPlayer.IPAddress, int(n.LocalPlayer.Port)))
-	if err != nil {
-		return false
-	}
-
-	n.Conn, err = ln.Accept()
-	if err != nil {
-		return false
-	}
-
-	return true
-}
-
-func (n *Netplay) JoinConnection() bool {
+func (n *Netplay) HostConnection() {
+	n.IsHosting = true
 	var err error
-	n.Conn, err = net.Dial("tcp", fmt.Sprintf("%s:%d", n.LocalPlayer.IPAddress, int(n.LocalPlayer.Port)))
+	n.Conn, err = net.ListenUDP("udp4", n.LocalAddr)
 	if err != nil {
-		return false
+		fmt.Println(err)
+		return
 	}
-	return true
+	defer n.Conn.Close()
+	go n.Read()
+}
+
+func (n *Netplay) JoinConnection() {
+	n.IsHosting = false
+	var err error
+	n.Conn, err = net.DialUDP("udp4", n.LocalAddr, n.RemoteAddr)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer n.Conn.Close()
+	go n.Read()
 }
 
 func (n *Netplay) Disconnect() ggponet.GGPOErrorCode {

@@ -54,11 +54,11 @@ func SynchronizeInput(ggpo *ggponet.GGPOSession, values []byte, size int64, disc
 	return (*ggpo).SyncInput(values, size, disconnectFlags)
 }
 
-func DisconnectPlayer(ggpo *ggponet.GGPOSession) ggponet.GGPOErrorCode {
+func DisconnectPlayer(ggpo *ggponet.GGPOSession, player ggponet.GGPOPlayerHandle) ggponet.GGPOErrorCode {
 	if ggpo == nil {
 		return ggponet.GGPO_ERRORCODE_INVALID_SESSION
 	}
-	return (*ggpo).DisconnectLocalPlayer()
+	return (*ggpo).DisconnectPlayer(player)
 }
 
 func AdvanceFrame(ggpo *ggponet.GGPOSession) ggponet.GGPOErrorCode {

@@ -16,8 +16,8 @@ type Peer2PeerBackend struct {
 	//Poll                  _poll;
 	//UdpProtocol           _spectators[ggponet.GGPO_MAX_SPECTATORS];
 	LocalConnectStatus    []ggponet.ConnectStatus
-	Netplay               network.Netplay
-	Endpoints             []ggponet.GGPOPlayer
+	Endpoints             []network.Netplay
+	Players               []ggponet.GGPOPlayer
 	Sync                  lib.Sync
 	InputSize             int64
 	NumPlayers            int64
@@ -41,7 +41,8 @@ func (p *Peer2PeerBackend) Init(cb ggponet.GGPOSessionCallbacks, gamename string
 	config.NumPredictionFrames = lib.MAX_PREDICTION_FRAMES
 	p.Sync.Init(config, p.LocalConnectStatus)
 
-	p.Endpoints = make([]ggponet.GGPOPlayer, p.NumPlayers)
+	p.Players = make([]ggponet.GGPOPlayer, p.NumPlayers)
+	p.Endpoints = make([]network.Netplay, p.NumPlayers)
 	p.LocalConnectStatus = make([]ggponet.ConnectStatus, p.NumPlayers)
 	for i := 0; i < len(p.LocalConnectStatus); i++ {
 		p.LocalConnectStatus[i].LastFrame = -1
@@ -56,33 +57,38 @@ func (p *Peer2PeerBackend) AddPlayer(player *ggponet.GGPOPlayer, handle *ggponet
 	}
 
 	queue := player.PlayerNum - 1
-	p.Endpoints[queue] = *player
+	p.Players[queue] = *player
 	if player.PlayerNum < 1 || player.PlayerNum > p.NumPlayers {
 		return ggponet.GGPO_ERRORCODE_PLAYER_OUT_OF_RANGE
 	}
 	*handle = p.QueueToPlayerHandle(queue)
 
-	if player.Type == ggponet.GGPO_PLAYERTYPE_LOCAL {
-		return p.JoinRemotePlayer(queue)
+	if player.Type == ggponet.GGPO_PLAYERTYPE_REMOTE {
+		p.AddRemotePlayer(player, queue)
 	}
 
 	return ggponet.GGPO_OK
 }
 
-func (p *Peer2PeerBackend) JoinRemotePlayer(queue int64) ggponet.GGPOErrorCode {
-	p.Netplay.Init(p.Endpoints[queue], p.Endpoints[0])
-	if queue == 0 {
-		if !p.Netplay.HostConnection() {
-			return ggponet.GGPO_ERRORCODE_PLAYER_DISCONNECTED
-		}
+func (p *Peer2PeerBackend) AddRemotePlayer(player *ggponet.GGPOPlayer, queue int64) {
+	p.Synchronizing = true
+	p.Endpoints[queue].Init(*player, queue)
+	if p.MustHostConnection(queue) {
+		p.Endpoints[queue].HostConnection()
 	} else {
-		if !p.Netplay.JoinConnection() {
-			return ggponet.GGPO_ERRORCODE_PLAYER_DISCONNECTED
+		p.Endpoints[queue].JoinConnection()
+	}
+}
+
+func (p *Peer2PeerBackend) MustHostConnection(other int64) bool {
+	result := false
+	for i := 0; i < int(other); i++ {
+		if p.Players[i].Type == ggponet.GGPO_PLAYERTYPE_LOCAL {
+			result = true
+			break
 		}
 	}
-	p.Synchronizing = true
-
-	return ggponet.GGPO_OK
+	return result
 }
 
 func (p *Peer2PeerBackend) AddLocalInput(player ggponet.GGPOPlayerHandle, values []byte, size int64) ggponet.GGPOErrorCode {
@@ -114,7 +120,9 @@ func (p *Peer2PeerBackend) AddLocalInput(player ggponet.GGPOPlayerHandle, values
 		p.LocalConnectStatus[queue].LastFrame = input.Frame
 
 		// Send the input to all the remote players.
-		p.Netplay.SendInput(input)
+		for i := 0; i < int(p.NumPlayers); i++ {
+			p.Endpoints[i].SendInput(input)
+		}
 	}
 
 	return ggponet.GGPO_OK
@@ -144,10 +152,6 @@ func (p *Peer2PeerBackend) IncrementFrame() ggponet.GGPOErrorCode {
 	return ggponet.GGPO_OK
 }
 
-func (p *Peer2PeerBackend) DisconnectLocalPlayer() ggponet.GGPOErrorCode {
-	return p.Netplay.Disconnect()
-}
-
 func (p *Peer2PeerBackend) DisconnectPlayer(player ggponet.GGPOPlayerHandle) ggponet.GGPOErrorCode {
 	var queue int64
 	var result ggponet.GGPOErrorCode
@@ -175,9 +179,7 @@ func (p *Peer2PeerBackend) DisconnectPlayerQueue(queue int64, syncto int64) {
 	var info ggponet.GGPOEvent
 	framecount := p.Sync.GetFrameCount()
 
-	//TODO Disconnect()
-	//Revoir la logique
-	//p.Endpoints[queue].Disconnect()
+	p.Endpoints[queue].Disconnect()
 
 	p.LocalConnectStatus[queue].Disconnected = 1
 	p.LocalConnectStatus[queue].LastFrame = syncto

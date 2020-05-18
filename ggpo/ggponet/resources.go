@@ -14,7 +14,6 @@ type GGPOSession interface {
 	SyncInput(values []byte, size int64, disconnectFlags *int64) GGPOErrorCode
 	IncrementFrame() GGPOErrorCode
 	//Chat(text string) GGPOErrorCode
-	DisconnectLocalPlayer() GGPOErrorCode
 	DisconnectPlayer(handle GGPOPlayerHandle) GGPOErrorCode
 	GetNetworkStats(stats *GGPONetworkStats, handle GGPOPlayerHandle) GGPOErrorCode
 	//Logv(fmt string, va_list list) GGPOErrorCode
