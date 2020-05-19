@@ -85,7 +85,7 @@ func (s *SyncTestBackend) SyncInput(values []byte, size int64, disconnectFlags *
 	if s.RollingBack {
 		s.LastInput = s.SavedFrame[0].input // front() of Ringbuffer = 0 ?
 	} else {
-		if s.Sync.GetFrameCount() ''== 0 {
+		if s.Sync.GetFrameCount() == 0 {
 			s.Sync.SaveCurrentFrame()
 		}
 		s.LastInput = s.CurrentInput
@@ -127,7 +127,7 @@ func (s *SyncTestBackend) IncrementFrame() ggponet.GGPOErrorCode {
 		// Load the last verified frame and set the rollback flag to true.
 		s.Sync.LoadFrame(s.LastVerified)
 		s.RollingBack = true
-		for !s.SavedFrame.empty() {
+		for !s.SavedFrame.Empty() {
 			s.Callbacks.AdvanceFrame(0)
 
 			// Verify that the checksumn of this frame is the same as the one in our list

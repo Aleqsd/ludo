@@ -121,7 +121,7 @@ func (p *Peer2PeerBackend) AddLocalInput(player ggponet.GGPOPlayerHandle, values
 
 		// Send the input to all the remote players.
 		for i := 0; i < int(p.NumPlayers); i++ {
-			p.Endpoints[i].SendInput(input)
+			p.Endpoints[i].SendInput(&input)
 		}
 	}
 
@@ -178,7 +178,7 @@ func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
 						input.Size = p.InputSize * p.NumPlayers
 						p.Sync.GetConfirmedInputs(input.Bits, p.InputSize*p.NumPlayers, p.NextSpectatorFrame)
 						for i := 0; i < int(p.NumSpectators); i++ {
-							p.Spectators[i].SendInput(input)
+							p.Spectators[i].SendInput(&input)
 						}
 						p.NextSpectatorFrame++
 					}
@@ -210,7 +210,7 @@ func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
 func (p *Peer2PeerBackend) Poll2Players(currentFrame int64) int64 {
 	totalMinConfirmed := int64(lib.MAX_INT)
 	for i := 0; i < int(p.NumPlayers); i++ {
-		queueConnected := p.Endpoints[i].PeerConnectStatus
+		queueConnected := p.Endpoints[i].PeerConnectStatus //TODO: à revoir
 
 		if p.LocalConnectStatus[i].Disconnected == 0 {
 			totalMinConfirmed = lib.MIN(p.LocalConnectStatus[i].LastFrame, totalMinConfirmed)
@@ -219,6 +219,47 @@ func (p *Peer2PeerBackend) Poll2Players(currentFrame int64) int64 {
 		if !queueConnected && p.LocalConnectStatus[i].Disconnected == 0 {
 			//Log("disconnecting i %d by remote request.\n", i)
 			p.DisconnectPlayerQueue(int64(i), totalMinConfirmed)
+		}
+		//Log("  totalMinConfirmed = %d.\n", totalMinConfirmed)
+	}
+	return totalMinConfirmed
+}
+
+func (p *Peer2PeerBackend) PollNPlayers(currentFrame int64) int64 {
+	var lastReceived int64
+
+	// discard confirmed frames as appropriate
+	totalMinConfirmed := int64(lib.MAX_INT)
+	for queue := 0; queue < int(p.NumPlayers); queue++ {
+		queueConnected := true
+		queueMinConfirmed := int64(lib.MAX_INT)
+		//Log("considering queue %d.\n", queue);
+		for i := 0; i < int(p.NumPlayers); i++ {
+			// we're going to do a lot of logic here in consideration of endpoint i.
+			// keep accumulating the minimum confirmed point for all n*n packets and
+			// throw away the rest.
+			connected := p.Endpoints[i].GetPeerConnectStatus(queue, &lastReceived)
+
+			queueConnected = queueConnected && connected
+			queueMinConfirmed = int64(lib.MIN(lastReceived, queueMinConfirmed))
+			//Log("  endpoint %d: connected = %d, last_received = %d, queueMinConfirmed = %d.\n", i, connected, last_received, queueMinConfirmed)
+		}
+		// merge in our local status only if we're still connected!
+		if p.LocalConnectStatus[queue].Disconnected == 0 {
+			queueMinConfirmed = lib.MIN(p.LocalConnectStatus[queue].LastFrame, queueMinConfirmed)
+		}
+		//Log("  local endp: connected = %d, last_received = %d, queueMinConfirmed = %d.\n", p.LocalConnectStatus[queue].Disconnected == 0, p.LocalConnectStatus[queue].LastFrame, queueMinConfirmed)
+
+		if queueConnected {
+			totalMinConfirmed = lib.MIN(queueMinConfirmed, totalMinConfirmed)
+		} else {
+			// check to see if this disconnect notification is further back than we've been before.  If
+			// so, we need to re-adjust.  This can happen when we detect our own disconnect at frame n
+			// and later receive a disconnect notification for frame n-1.
+			if p.LocalConnectStatus[queue].Disconnected == 0 || p.LocalConnectStatus[queue].LastFrame > queueMinConfirmed {
+				//Log("disconnecting queue %d by remote request.\n", queue)
+				p.DisconnectPlayerQueue(int64(queue), queueMinConfirmed)
+			}
 		}
 		//Log("  totalMinConfirmed = %d.\n", totalMinConfirmed)
 	}

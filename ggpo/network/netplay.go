@@ -14,19 +14,31 @@ type Event struct {
 	PlayerNum int64
 }
 
+type State int64
+
+const (
+	Syncing State = iota
+	Synchronzied
+	Running
+	Disconnected
+)
+
 type Netplay struct {
-	Callbacks           ggponet.GGPOSessionCallbacks
-	Poll                lib.Poll
-	Conn                *net.UDPConn
-	LocalAddr           *net.UDPAddr
-	RemoteAddr          *net.UDPAddr
-	Queue               int64
-	IsHosting           bool
-	LastReceivedInput   lib.GameInput
-	LocalFrameAdvantage int64
-	RoundTripTime       int64
-	PeerConnectStatus   bool
-	TimeSync            lib.TimeSync
+	Callbacks            ggponet.GGPOSessionCallbacks
+	Poll                 lib.Poll
+	Conn                 *net.UDPConn
+	LocalAddr            *net.UDPAddr
+	RemoteAddr           *net.UDPAddr
+	Queue                int64
+	IsHosting            bool
+	LastReceivedInput    lib.GameInput
+	LocalFrameAdvantage  int64
+	RemoteFrameAdvantage int64
+	RoundTripTime        int64
+	PeerConnectStatus    bool
+	TimeSync             lib.TimeSync
+	CurrentState         State
+	PendingOutput        lib.RingBuffer
 }
 
 func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64 /*, poll lib.Poll, callbacks ggponet.GGPOSessionCallbacks*/) {
@@ -38,6 +50,7 @@ func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64 /*, poll lib
 	n.Queue = queue
 	n.LastReceivedInput.SimpleInit(-1, nil, 1)
 	n.LocalFrameAdvantage = 0
+	n.PendingOutput.Init(64)
 
 	//Log("binding udp socket to port %d.\n", port);
 }
@@ -70,9 +83,17 @@ func (n *Netplay) Read() {
 	}
 }
 
-func (n *Netplay) SendInput(input lib.GameInput) {
-	inputByte := n.InputToByte(input)
-	n.Write(inputByte)
+func (n *Netplay) SendInput(input *lib.GameInput) {
+	if n.CurrentState == Running {
+		n.TimeSync.AdvanceFrame(input, n.LocalFrameAdvantage, n.RemoteFrameAdvantage)
+		var t lib.T = &input
+		n.PendingOutput.Push(&t)
+	}
+	n.SendPendingOutput()
+}
+
+func (n *Netplay) SendPendingOutput() {
+
 }
 
 func (n *Netplay) ReceiveInput() Event {
@@ -144,6 +165,7 @@ func (n *Netplay) JoinConnection() {
 }
 
 func (n *Netplay) Disconnect() ggponet.GGPOErrorCode {
+	n.CurrentState = Disconnected
 	n.Conn.Close()
 	if n.Conn == nil {
 		return ggponet.GGPO_OK
