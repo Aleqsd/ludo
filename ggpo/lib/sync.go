@@ -63,13 +63,13 @@ func (s *Sync) Init(config Config, ConnectStatus []ggponet.ConnectStatus) {
 	s.CreateQueues(config)
 }
 
-func (s *Sync) SetLastConfirmedFrame(frame int64) {   
-   s.LastConfirmedFrame = frame
-   if s.LastConfirmedFrame > 0 {
-      for i := 0; i < int(s.Config.NumPlayers); i++ {
-         s.InputQueues[i].DiscardConfirmedFrames(frame - 1)
-      }
-   }
+func (s *Sync) SetLastConfirmedFrame(frame int64) {
+	s.LastConfirmedFrame = frame
+	if s.LastConfirmedFrame > 0 {
+		for i := 0; i < int(s.Config.NumPlayers); i++ {
+			s.InputQueues[i].DiscardConfirmedFrames(frame - 1)
+		}
+	}
 }
 
 func (s *Sync) SetFrameDelay(queue int64, delay int64) {
@@ -225,6 +225,14 @@ func (s *Sync) SaveCurrentFrame() {
 
 	//Log("=== Saved frame info %d (size: %d  checksum: %08x).\n", state->frame, state->cbuf, state->checksum)
 	s.SavedState.head = (s.SavedState.head + 1) % int64(len(s.SavedState.frames))
+}
+
+func (s *Sync) GetLastSavedFrame() SavedFrame {
+	i := s.SavedState.head - 1
+	if i < 0 {
+		i = int64(unsafe.Sizeof(s.SavedState.frames)) - 1
+	}
+	return s.SavedState.frames[i]
 }
 
 func (s *Sync) FindSavedFrameIndex(frame int64) int64 {
