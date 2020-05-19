@@ -26,6 +26,7 @@ type Netplay struct {
 	LocalFrameAdvantage int64
 	RoundTripTime       int64
 	PeerConnectStatus   bool
+	TimeSync            lib.TimeSync
 }
 
 func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64 /*, poll lib.Poll, callbacks ggponet.GGPOSessionCallbacks*/) {
@@ -153,4 +154,8 @@ func (n *Netplay) Disconnect() ggponet.GGPOErrorCode {
 func (n *Netplay) SetLocalFrameNumber(localFrame int64) {
 	remoteFrame := n.LastReceivedInput.Frame + (n.RoundTripTime * 60 / 1000)
 	n.LocalFrameAdvantage = remoteFrame - localFrame
+}
+
+func (n *Netplay) RecommendFrameDelay() int64 {
+	return n.TimeSync.RecommendFrameWaitDuration(false)
 }
