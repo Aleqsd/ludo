@@ -16,7 +16,7 @@ type SyncTestBackend struct {
 	Game          string
 	CurrentInput  lib.GameInput
 	LastInput     lib.GameInput
-	SavedFrame    [32]SavedInfo
+	SavedFrame    lib.RingBuffer
 	Sync          lib.Sync
 }
 
@@ -38,11 +38,12 @@ func (s *SyncTestBackend) Init(cb *ggponet.GGPOSessionCallbacks, gamename string
 	s.Logfp = ""
 	s.Game = gamename
 	s.CurrentInput.Erase()
+	s.SavedFrame.Init(32)
 
 	var config lib.Config
 	config.Callbacks = s.Callbacks
 	config.NumPredictionFrames = lib.MAX_PREDICTION_FRAMES
-	//TODO SyncInit ??
+	//TODO: SyncInit ??
 	// lib.Sync.Init(config)
 
 	s.Callbacks.BeginGame(s.Game)
@@ -63,7 +64,7 @@ func (s *SyncTestBackend) AddPlayer(player *ggponet.GGPOPlayer, handle *ggponet.
 	if player.PlayerNum < 1 || player.PlayerNum > s.NumPlayers {
 		return ggponet.GGPO_ERRORCODE_PLAYER_OUT_OF_RANGE
 	}
-	//TODO Conversion handle to int ?
+	//TODO: Conversion handle to int ?
 	//*handle = player.PlayerNum-1
 	return ggponet.GGPO_OK
 }
@@ -83,7 +84,7 @@ func (s *SyncTestBackend) AddLocalInput(player ggponet.GGPOPlayerHandle, values 
 func (s *SyncTestBackend) SyncInput(values []byte, size int64, disconnectFlags *int64) {
 	s.BeginLog(false)
 	if s.RollingBack {
-		s.LastInput = s.SavedFrame[0].input // front() of Ringbuffer = 0 ?
+		s.LastInput = s.SavedFrame[0].input // TODO: Ringbuffer Front :       _last_input = _saved_frames.front().input;
 	} else {
 		if s.Sync.GetFrameCount() == 0 {
 			s.Sync.SaveCurrentFrame()
@@ -91,7 +92,7 @@ func (s *SyncTestBackend) SyncInput(values []byte, size int64, disconnectFlags *
 		s.LastInput = s.CurrentInput
 	}
 	s.LastInput.Bits = values
-	//TODO if *int ?
+	//TODO: if *int ?
 	//if disconnectFlags {
 	//	*disconnectFlags = 0
 	//}
@@ -115,7 +116,7 @@ func (s *SyncTestBackend) IncrementFrame() ggponet.GGPOErrorCode {
 	var info SavedInfo
 	info.frame = frame
 	info.input = s.LastInput
-	//TODO no field cbuf in savedFrame ??
+	//TODO: no field cbuf in savedFrame ??
 	//info.cbuf = s.Sync.GetLastSavedFrame().cbuf
 	// info.buf = (char *)malloc(info.cbuf);
 	// memcpy(info.buf, _sync.GetLastSavedFrame().buf, info.cbuf);
@@ -127,6 +128,7 @@ func (s *SyncTestBackend) IncrementFrame() ggponet.GGPOErrorCode {
 		// Load the last verified frame and set the rollback flag to true.
 		s.Sync.LoadFrame(s.LastVerified)
 		s.RollingBack = true
+		//TODO: Implement Ringbuffer
 		for !s.SavedFrame.Empty() {
 			s.Callbacks.AdvanceFrame(0)
 
