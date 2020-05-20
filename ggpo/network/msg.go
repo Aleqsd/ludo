@@ -25,8 +25,8 @@ const (
 )
 
 type hdr struct {
-	Magic          int64
-	SequenceNumber int64
+	Magic          uint64
+	SequenceNumber uint64
 	Type           MsgType
 }
 
@@ -82,8 +82,6 @@ func (n *NetplayMsg) PacketSize() int64 {
 }
 
 func (n *NetplayMsg) PayloadSize() int64 {
-	var size int64
-
 	switch n.Hdr.Type {
 	case SyncRequest:
 		return int64(unsafe.Sizeof(n.SyncRequest))
@@ -98,9 +96,7 @@ func (n *NetplayMsg) PayloadSize() int64 {
 	case KeepAlive:
 		return 0
 	case Input:
-		size = int64(unsafe.Sizeof(n.Input))
-		size += (n.Input.NumBits + 7) / 8
-		return size
+		return int64(unsafe.Sizeof(n.Input))
 	}
 	return 0
 }

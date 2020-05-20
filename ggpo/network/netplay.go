@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"math/rand"
 	"net"
 	"time"
 
@@ -50,7 +51,11 @@ type Netplay struct {
 	CurrentState         State
 	PendingOutput        lib.RingBuffer
 	PacketsSent          int64
+	BytesSent            int64
 	LastSendTime         uint64
+	MagicNumber          uint64
+	NextSendSeq          uint64
+	SendQueue            lib.RingBuffer
 }
 
 func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []ggponet.ConnectStatus /*, poll lib.Poll, callbacks ggponet.GGPOSessionCallbacks*/) {
@@ -67,7 +72,14 @@ func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []gg
 	n.LocalFrameAdvantage = 0
 	n.PendingOutput.Init(64)
 	n.PacketsSent = 0
+	n.BytesSent = 0
 	n.LastSendTime = 0
+	n.NextSendSeq = 0
+	n.MagicNumber = 0
+	n.SendQueue.Init(64)
+	for n.MagicNumber == 0 {
+		n.MagicNumber = rand.Uint64()
+	}
 
 	//Log("binding udp socket to port %d.\n", port);
 }
@@ -164,13 +176,21 @@ func (n *Netplay) SendPendingOutput() {
 func (n *Netplay) SendMsg(msg *NetplayMsg) {
 	n.PacketsSent++
 	n.LastSendTime = GetCurrentTimeMS()
-	/*_bytes_sent += msg->PacketSize();
+	n.BytesSent += msg.PacketSize()
 
-	msg.Hdr.Magic = _magic_number;
-	msg.Hdr.SequenceNumber = _next_send_seq++;
+	msg.Hdr.Magic = n.MagicNumber
+	n.NextSendSeq++
+	msg.Hdr.SequenceNumber = n.NextSendSeq
 
-	_send_queue.push(QueueEntry(Platform::GetCurrentTimeMS(), _peer_addr, msg));
-	PumpSendQueue();*/
+	var queue QueueEntry
+	queue.Init(GetCurrentTimeMS(), n.RemoteAddr, msg)
+	var t lib.T = &queue
+	n.SendQueue.Push(&t)
+	n.PumpSendQueue()
+}
+
+func (n *Netplay) PumpSendQueue() {
+
 }
 
 func (n *Netplay) ReceiveInput() Event {
