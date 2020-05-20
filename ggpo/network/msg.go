@@ -1,5 +1,11 @@
 package network
 
+import (
+	"unsafe"
+
+	"github.com/libretro/ludo/ggpo/ggponet"
+)
+
 const (
 	MAX_COMPRESSED_BITS = 4096
 	MSG_MAX_PLAYERS     = 4
@@ -8,55 +14,93 @@ const (
 type MsgType int64
 
 const (
-	Invalid       MsgType = 0
-	SyncRequest   MsgType = 1
-	SyncReply     MsgType = 2
-	Input         MsgType = 3
-	QualityReport MsgType = 4
-	QualityReply  MsgType = 5
-	KeepAlive     MsgType = 6
-	InputAck      MsgType = 7
+	Invalid MsgType = iota
+	SyncRequest
+	SyncReply
+	Input
+	QualityReport
+	QualityReply
+	KeepAlive
+	InputAck
 )
 
-type connectStatus struct {
-	disconnected int64
-	lastFrame    int64
-}
-
 type hdr struct {
-	magic          int64
-	sequenceNumber int64
-	packetType     int64
+	Magic          int64
+	SequenceNumber int64
+	Type           MsgType
 }
 
 type syncRequest struct {
-	randomRequest   int64 /* please reply back with this random data */
-	remoteMagic     int64
-	remoteEndpoints int64
+	RandomRequest   int64 /* please reply back with this random data */
+	RemoteMagic     int64
+	RemoteEndpoints int64
 }
 type syncReply struct {
-	randomReply int64 /* OK, here's your random data back */
+	RandomReply int64 /* OK, here's your random data back */
 }
 
 type qualityReport struct {
-	frameAdvantage int64 /* what's the other guy's frame advantage? */
-	ping           int64
+	FrameAdvantage int64 /* what's the other guy's frame advantage? */
+	Ping           int64
 }
 
 type qualityReply struct {
-	pong int64
+	Pong int64
 }
 
 type input struct {
-	peerConnectStatus   connectStatus
-	startFrame          int64
-	disconnectRequested int64
-	ackFrame            int64
-	numBits             int64
-	inputSize           int64                      // XXX: shouldn't be in every single packet!
-	bits                [MAX_COMPRESSED_BITS]int64 /* must be last */
+	PeerConnectStatus   []ggponet.ConnectStatus
+	StartFrame          int64
+	DisconnectRequested bool
+	AckFrame            int64
+	NumBits             int64
+	InputSize           int64  // XXX: shouldn't be in every single packet!
+	Bits                []byte /* must be last */
 }
 
 type inputAck struct {
-	ackFrame int64
+	AckFrame int64
+}
+
+type NetplayMsg struct {
+	ConnectStatus ggponet.ConnectStatus
+	Hdr           hdr
+	SyncRequest   syncRequest
+	SyncReply     syncReply
+	QualityReport qualityReport
+	QualityReply  qualityReply
+	Input         input
+	InputAck      inputAck
+}
+
+func (n *NetplayMsg) Init(t MsgType) {
+	n.Hdr.Type = t
+}
+
+func (n *NetplayMsg) PacketSize() int64 {
+	return int64(unsafe.Sizeof(n.Hdr)) + n.PayloadSize()
+}
+
+func (n *NetplayMsg) PayloadSize() int64 {
+	var size int64
+
+	switch n.Hdr.Type {
+	case SyncRequest:
+		return int64(unsafe.Sizeof(n.SyncRequest))
+	case SyncReply:
+		return int64(unsafe.Sizeof(n.SyncReply))
+	case QualityReport:
+		return int64(unsafe.Sizeof(n.QualityReport))
+	case QualityReply:
+		return int64(unsafe.Sizeof(n.QualityReply))
+	case InputAck:
+		return int64(unsafe.Sizeof(n.InputAck))
+	case KeepAlive:
+		return 0
+	case Input:
+		size = int64(unsafe.Sizeof(n.Input))
+		size += (n.Input.NumBits + 7) / 8
+		return size
+	}
+	return 0
 }

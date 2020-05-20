@@ -1,12 +1,14 @@
 package network
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"net"
 
 	"github.com/libretro/ludo/ggpo/ggponet"
 	"github.com/libretro/ludo/ggpo/lib"
+	"github.com/libretro/ludo/ggpo/bitvector"
 )
 
 type Event struct {
@@ -32,6 +34,9 @@ type Netplay struct {
 	Queue                int64
 	IsHosting            bool
 	LastReceivedInput    lib.GameInput
+	LastAckedInput       lib.GameInput
+	LastSentInput        lib.GameInput
+	LocalConnectStatus   []ggponet.ConnectStatus
 	LocalFrameAdvantage  int64
 	RemoteFrameAdvantage int64
 	RoundTripTime        int64
@@ -41,7 +46,7 @@ type Netplay struct {
 	PendingOutput        lib.RingBuffer
 }
 
-func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64 /*, poll lib.Poll, callbacks ggponet.GGPOSessionCallbacks*/) {
+func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []ggponet.ConnectStatus /*, poll lib.Poll, callbacks ggponet.GGPOSessionCallbacks*/) {
 	//n.Callbacks = callbacks
 	//n.Poll = poll
 	//n.Poll.RegisterLoop(n)
@@ -49,6 +54,9 @@ func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64 /*, poll lib
 	n.RemoteAddr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", remotePlayer.IPAddress, int(remotePlayer.Port)))
 	n.Queue = queue
 	n.LastReceivedInput.SimpleInit(-1, nil, 1)
+	n.LastAckedInput.SimpleInit(-1, nil, 1)
+	n.LastSentInput.SimpleInit(-1, nil, 1)
+	n.LocalConnectStatus = status
 	n.LocalFrameAdvantage = 0
 	n.PendingOutput.Init(64)
 
@@ -93,6 +101,58 @@ func (n *Netplay) SendInput(input *lib.GameInput) {
 }
 
 func (n *Netplay) SendPendingOutput() {
+	var msg *NetplayMsg
+	msg.Init(Input)
+	offset := int64(0)
+	var bits []byte
+	var last lib.GameInput
+
+	if n.PendingOutput.Size > 0 {
+		last = n.LastAckedInput
+		msg.Input.Bits = make([]byte, MAX_COMPRESSED_BITS)
+		bits = msg.Input.Bits
+
+		var input lib.GameInput = n.PendingOutput.Front().(lib.GameInput)
+		msg.Input.StartFrame = input.Frame
+		msg.Input.InputSize = input.Size
+
+		for j := int64(0); j < n.PendingOutput.Size; j++ {
+			current := n.PendingOutput.Item(j).(lib.GameInput)
+			if bytes.Compare(current.Bits, last.Bits) != 0 {
+				for i := int64(0); i < current.Size*8; i++ {
+					if current.Value(i) != last.Value(i) {
+						bitvector.SetBit(msg.Input.Bits, &offset)
+						if current.Value(i) {
+							bitvector.SetBit(bits, &offset)
+						} else {
+							bitvector.ClearBit(bits, &offset)
+						}
+						bitvector.WriteNibblet(bits, i, &offset)
+					}
+				}
+			}
+			bitvector.ClearBit(msg.Input.Bits, &offset)
+			last = current
+			n.LastSentInput = current
+		}
+	} else {
+		msg.Input.StartFrame = 0
+		msg.Input.InputSize = 0
+	}
+	msg.Input.AckFrame = n.LastReceivedInput.Frame
+	msg.Input.NumBits = offset
+
+	msg.Input.DisconnectRequested = n.CurrentState == Disconnected
+	if n.LocalConnectStatus != nil {
+		copy(msg.Input.PeerConnectStatus, n.LocalConnectStatus)
+	} else {
+		msg.Input.PeerConnectStatus = make([]ggponet.ConnectStatus, MSG_MAX_PLAYERS)
+	}
+
+	n.SendMsg(msg)
+}
+
+func (n *Netplay) SendMsg(msg *NetplayMsg) {
 
 }
 

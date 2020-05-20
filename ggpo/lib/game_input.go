@@ -49,3 +49,7 @@ func (g *GameInput) Equal(other GameInput, bitsonly bool) bool {
 func (g *GameInput) Erase() {
 	g.Bits = make([]byte, len(g.Bits))
 }
+
+func (g *GameInput) Value(i int64) bool {
+	return (g.Bits[i/8] & (1 << (i % 8))) != 0
+}

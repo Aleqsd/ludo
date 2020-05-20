@@ -72,7 +72,7 @@ func (p *Peer2PeerBackend) AddPlayer(player *ggponet.GGPOPlayer, handle *ggponet
 
 func (p *Peer2PeerBackend) AddRemotePlayer(player *ggponet.GGPOPlayer, queue int64) {
 	p.Synchronizing = true
-	p.Endpoints[queue].Init(*player, queue)
+	p.Endpoints[queue].Init(*player, queue, p.LocalConnectStatus)
 	if p.MustHostConnection(queue) {
 		p.Endpoints[queue].HostConnection()
 	} else {
