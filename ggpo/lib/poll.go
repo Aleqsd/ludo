@@ -1,10 +1,5 @@
 package lib
 
-import (
-	"math"
-	"time"
-)
-
 type HANDLE int
 
 const (
@@ -12,16 +7,17 @@ const (
 )
 
 type Poll struct {
-	StartTime   int64
-	HandleCount int64
-	Handles     [MAX_POLLABLE_HANDLES]HANDLE
-	HandleSinks [MAX_POLLABLE_HANDLES]PollSinkCb
+	StartTime int64
+	/*	HandleCount int64
+		Handles     [MAX_POLLABLE_HANDLES]HANDLE
+		HandleSinks [MAX_POLLABLE_HANDLES]PollSinkCb
 
-	MsgSinks      [16]PollSinkCb
-	LoopSinks     [16]PollSinkCb
-	PeriodicSinks [16]PollSinkCb
+		MsgSinks      [16]PollSinkCb
+		LoopSinks     [16]PollSinkCb
+		PeriodicSinks [16]PollSinkCb*/
 }
 
+/*
 type IPollSink interface {
 	OnHandlePoll(cookie []byte)
 	OnMsgPoll(cookie []byte)
@@ -134,4 +130,4 @@ func (p *Poll) ComputeWaitTime(elapsed int64) int64 {
 		}
 	}
 	return waitTime
-}
+}*/

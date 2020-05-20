@@ -5,11 +5,16 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"time"
 
+	"github.com/libretro/ludo/ggpo/bitvector"
 	"github.com/libretro/ludo/ggpo/ggponet"
 	"github.com/libretro/ludo/ggpo/lib"
-	"github.com/libretro/ludo/ggpo/bitvector"
 )
+
+func GetCurrentTimeMS() uint64 {
+	return uint64(time.Now().UnixNano() / int64(time.Millisecond))
+}
 
 type Event struct {
 	Input     lib.GameInput
@@ -44,6 +49,8 @@ type Netplay struct {
 	TimeSync             lib.TimeSync
 	CurrentState         State
 	PendingOutput        lib.RingBuffer
+	PacketsSent          int64
+	LastSendTime         uint64
 }
 
 func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []ggponet.ConnectStatus /*, poll lib.Poll, callbacks ggponet.GGPOSessionCallbacks*/) {
@@ -59,6 +66,8 @@ func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []gg
 	n.LocalConnectStatus = status
 	n.LocalFrameAdvantage = 0
 	n.PendingOutput.Init(64)
+	n.PacketsSent = 0
+	n.LastSendTime = 0
 
 	//Log("binding udp socket to port %d.\n", port);
 }
@@ -153,7 +162,15 @@ func (n *Netplay) SendPendingOutput() {
 }
 
 func (n *Netplay) SendMsg(msg *NetplayMsg) {
+	n.PacketsSent++
+	n.LastSendTime = GetCurrentTimeMS()
+	/*_bytes_sent += msg->PacketSize();
 
+	msg.Hdr.Magic = _magic_number;
+	msg.Hdr.SequenceNumber = _next_send_seq++;
+
+	_send_queue.push(QueueEntry(Platform::GetCurrentTimeMS(), _peer_addr, msg));
+	PumpSendQueue();*/
 }
 
 func (n *Netplay) ReceiveInput() Event {
