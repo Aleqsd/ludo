@@ -12,6 +12,7 @@ import (
 	"github.com/libretro/ludo/ggpo/ggponet"
 	"github.com/libretro/ludo/ggpo/lib"
 	"github.com/libretro/ludo/ggpo/platform"
+	"github.com/sirupsen/logrus"
 )
 
 type Event struct {
@@ -91,7 +92,7 @@ func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []gg
 	n.OopPercent = platform.GetConfigInt("ggpo.oop.percent")
 	n.OoPacket.Msg = nil
 
-	//Log("binding udp socket to port %d.\n", port);
+	//logrus.Info(fmt.Sprintf("binding udp socket to port %d.", port))
 }
 
 func (n *Netplay) Write(msg *NetplayMsg) {
@@ -219,7 +220,7 @@ func (n *Netplay) PumpSendQueue() {
 		}
 		if n.OopPercent > 0 && n.OoPacket.Msg == nil && ((rand.Int63() % 100) < n.OopPercent) {
 			delay := rand.Int63() % (n.SendLatency*10 + 1000)
-			//Log("creating rogue oop (seq: %d  delay: %d)\n", entry.msg.Hdr.SequenceNumber, delay)
+			logrus.Info(fmt.Sprintf("creating rogue oop (seq: %d  delay: %d)", entry.Msg.Hdr.SequenceNumber, delay))
 			n.OoPacket.SendTime = platform.GetCurrentTimeMS() + uint64(delay)
 			n.OoPacket.Msg = entry.Msg
 			n.OoPacket.DestAddr = entry.DestAddr
@@ -230,7 +231,7 @@ func (n *Netplay) PumpSendQueue() {
 		n.SendQueue.Pop()
 	}
 	if n.OoPacket.Msg != nil && n.OoPacket.SendTime < platform.GetCurrentTimeMS() {
-		//Log("sending rogue oop!")
+		logrus.Info("sending rogue oop!")
 		n.Write(n.OoPacket.Msg)
 		n.OoPacket.Msg = nil
 	}
@@ -323,6 +324,6 @@ func (n *Netplay) RecommendFrameDelay() int64 {
 }
 
 func (n *Netplay) GetPeerConnectStatus(id int64, frame *int64) bool {
-	//TODO
+	//TODO:
 	return true
 }

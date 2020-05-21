@@ -101,7 +101,7 @@ func (p *Peer2PeerBackend) AddLocalInput(player ggponet.GGPOPlayerHandle, values
 	}
 
 	if input.Frame != lib.NULL_FRAME {
-		//Log("setting local connect status for local queue %d to %d", queue, input.frame);
+		logrus.Info(fmt.Sprintf("setting local connect status for local queue %d to %d", queue, input.Frame))
 		p.LocalConnectStatus[queue].LastFrame = input.Frame
 
 		// Send the input to all the remote players.
@@ -200,7 +200,7 @@ func (p *Peer2PeerBackend) Poll2Players(currentFrame int64) int64 {
 		if p.LocalConnectStatus[i].Disconnected == 0 {
 			totalMinConfirmed = lib.MIN(p.LocalConnectStatus[i].LastFrame, totalMinConfirmed)
 		}
-		logrus.Info(fmt.Sprintf("local endp: connected = %d, last_received = %d, totalMinConfirmed = %d.", p.LocalConnectStatus[i].Disconnected == 0, p.LocalConnectStatus[i].LastFrame, totalMinConfirmed))
+		logrus.Info(fmt.Sprintf("local endp: connected = %t, last_received = %d, totalMinConfirmed = %d.", p.LocalConnectStatus[i].Disconnected == 0, p.LocalConnectStatus[i].LastFrame, totalMinConfirmed))
 		if !queueConnected && p.LocalConnectStatus[i].Disconnected == 0 {
 			logrus.Info(fmt.Sprintf("disconnecting i %d by remote request.", i))
 			p.DisconnectPlayerQueue(int64(i), totalMinConfirmed)
@@ -227,13 +227,13 @@ func (p *Peer2PeerBackend) PollNPlayers(currentFrame int64) int64 {
 
 			queueConnected = queueConnected && connected
 			queueMinConfirmed = int64(lib.MIN(lastReceived, queueMinConfirmed))
-			logrus.Info(fmt.Sprintf("endpoint %d: connected = %d, last_received = %d, queueMinConfirmed = %d.", i, connected, lastReceived, queueMinConfirmed))
+			logrus.Info(fmt.Sprintf("endpoint %d: connected = %t, last_received = %d, queueMinConfirmed = %d.", i, connected, lastReceived, queueMinConfirmed))
 		}
 		// merge in our local status only if we're still connected!
 		if p.LocalConnectStatus[queue].Disconnected == 0 {
 			queueMinConfirmed = lib.MIN(p.LocalConnectStatus[queue].LastFrame, queueMinConfirmed)
 		}
-		logrus.Info(fmt.Sprintf("local endp: connected = %d, last_received = %d, queueMinConfirmed = %d.", p.LocalConnectStatus[queue].Disconnected == 0, p.LocalConnectStatus[queue].LastFrame, queueMinConfirmed))
+		logrus.Info(fmt.Sprintf("local endp: connected = %t, last_received = %d, queueMinConfirmed = %d.", p.LocalConnectStatus[queue].Disconnected == 0, p.LocalConnectStatus[queue].LastFrame, queueMinConfirmed))
 
 		if queueConnected {
 			totalMinConfirmed = lib.MIN(queueMinConfirmed, totalMinConfirmed)
