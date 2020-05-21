@@ -2,8 +2,8 @@ package lib
 
 import (
 	"math"
-	"time"
 
+	"github.com/libretro/ludo/ggpo/platform"
 	"github.com/sirupsen/logrus"
 )
 
@@ -14,7 +14,7 @@ const (
 )
 
 type Poll struct {
-	StartTime   int64
+	StartTime   uint64
 	HandleCount int64
 	Handles     [MAX_POLLABLE_HANDLES]HANDLE
 	HandleSinks [MAX_POLLABLE_HANDLES]PollSinkCb
@@ -106,13 +106,13 @@ func (p *Poll) Pump(timeout int64) bool {
 	finished := false
 
 	if p.StartTime == 0 {
-		p.StartTime = time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
+		p.StartTime = platform.GetCurrentTimeMS()
 	}
 
-	elapsed := time.Now().UnixNano()/(int64(time.Millisecond)/int64(time.Nanosecond)) - p.StartTime
+	elapsed := platform.GetCurrentTimeMS() - p.StartTime
 	maxWait := p.ComputeWaitTime(elapsed)
 	if maxWait != math.MaxInt64 {
-		timeout = MIN(timeout, maxWait)
+		timeout = MIN(int64(timeout), int64(maxWait))
 	}
 
 	//TODO: WaitForMultipleObjects ?
@@ -148,7 +148,7 @@ func (p *Poll) Pump(timeout int64) bool {
 	return finished
 }
 
-func (p *Poll) ComputeWaitTime(elapsed int64) int64 {
+func (p *Poll) ComputeWaitTime(elapsed uint64) uint64 {
 	var waitTime int64 = math.MaxInt64
 	count := p.PeriodicSinks.Size
 
