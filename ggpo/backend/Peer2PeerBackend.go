@@ -1,9 +1,12 @@
 package backend
 
 import (
+	"fmt"
+
 	"github.com/libretro/ludo/ggpo/ggponet"
 	"github.com/libretro/ludo/ggpo/lib"
 	"github.com/libretro/ludo/ggpo/network"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -51,25 +54,6 @@ func (p *Peer2PeerBackend) Init(cb ggponet.GGPOSessionCallbacks, gamename string
 	p.Callbacks.BeginGame(gamename)
 }
 
-func (p *Peer2PeerBackend) AddPlayer(player *ggponet.GGPOPlayer, handle *ggponet.GGPOPlayerHandle) ggponet.GGPOErrorCode {
-	if player.Type == ggponet.GGPO_PLAYERTYPE_SPECTATOR {
-		return p.AddSpectator(player.IPAddress, player.Port)
-	}
-
-	queue := player.PlayerNum - 1
-	p.Players[queue] = *player
-	if player.PlayerNum < 1 || player.PlayerNum > p.NumPlayers {
-		return ggponet.GGPO_ERRORCODE_PLAYER_OUT_OF_RANGE
-	}
-	*handle = p.QueueToPlayerHandle(queue)
-
-	if player.Type == ggponet.GGPO_PLAYERTYPE_REMOTE {
-		p.AddRemotePlayer(player, queue)
-	}
-
-	return ggponet.GGPO_OK
-}
-
 func (p *Peer2PeerBackend) AddRemotePlayer(player *ggponet.GGPOPlayer, queue int64) {
 	p.Synchronizing = true
 	p.Endpoints[queue].Init(*player, queue, p.LocalConnectStatus)
@@ -96,7 +80,7 @@ func (p *Peer2PeerBackend) AddLocalInput(player ggponet.GGPOPlayerHandle, values
 	var input lib.GameInput
 	var result ggponet.GGPOErrorCode
 
-	if p.Sync.InRollback() {
+	if p.Sync.Rollingback {
 		return ggponet.GGPO_ERRORCODE_IN_ROLLBACK
 	}
 	if p.Synchronizing {
@@ -145,7 +129,7 @@ func (p *Peer2PeerBackend) SyncInput(values []byte, size int64, disconnectFlags 
 }
 
 func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
-	if !p.Sync.InRollback() {
+	if !p.Sync.Rollingback {
 		//_poll.Pump(0);
 
 		p.PollNetplayEvents()
@@ -167,11 +151,11 @@ func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
 				totalMinConfirmed = p.PollNPlayers(currentFrame)
 			}
 
-			//Log("last confirmed frame in p2p backend is %d.\n", totalMinConfirmed);
+			logrus.Info(fmt.Sprintf("last confirmed frame in p2p backend is %d.", totalMinConfirmed))
 			if totalMinConfirmed >= 0 {
 				if p.NumSpectators > 0 {
 					for p.NextSpectatorFrame <= totalMinConfirmed {
-						//Log("pushing frame %d to spectators.\n", p.NextSpectatorFrame)
+						logrus.Info(fmt.Sprintf("pushing frame %d to spectators.", p.NextSpectatorFrame))
 
 						var input lib.GameInput
 						input.Frame = p.NextSpectatorFrame
@@ -183,7 +167,7 @@ func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
 						p.NextSpectatorFrame++
 					}
 				}
-				//Log("setting confirmed frame in sync to %d.\n", totalMinConfirmed);
+				logrus.Info(fmt.Sprintf("setting confirmed frame in sync to %d.\n", totalMinConfirmed))
 				p.Sync.SetLastConfirmedFrame(totalMinConfirmed)
 			}
 
@@ -215,12 +199,12 @@ func (p *Peer2PeerBackend) Poll2Players(currentFrame int64) int64 {
 		if p.LocalConnectStatus[i].Disconnected == 0 {
 			totalMinConfirmed = lib.MIN(p.LocalConnectStatus[i].LastFrame, totalMinConfirmed)
 		}
-		//Log("  local endp: connected = %d, last_received = %d, totalMinConfirmed = %d.\n", !p.LocalConnectStatus[i].Disconnected, p.LocalConnectStatus[i].LastFrame, total_min_confirmed)
+		logrus.Info(fmt.Sprintf("local endp: connected = %d, last_received = %d, totalMinConfirmed = %d.", p.LocalConnectStatus[i].Disconnected == 0, p.LocalConnectStatus[i].LastFrame, totalMinConfirmed))
 		if !queueConnected && p.LocalConnectStatus[i].Disconnected == 0 {
-			//Log("disconnecting i %d by remote request.\n", i)
+			logrus.Info(fmt.Sprintf("disconnecting i %d by remote request.", i))
 			p.DisconnectPlayerQueue(int64(i), totalMinConfirmed)
 		}
-		//Log("  totalMinConfirmed = %d.\n", totalMinConfirmed)
+		logrus.Info(fmt.Sprintf("totalMinConfirmed = %d.\n", totalMinConfirmed))
 	}
 	return totalMinConfirmed
 }
@@ -233,7 +217,7 @@ func (p *Peer2PeerBackend) PollNPlayers(currentFrame int64) int64 {
 	for queue := 0; queue < int(p.NumPlayers); queue++ {
 		queueConnected := true
 		queueMinConfirmed := int64(lib.MAX_INT)
-		//Log("considering queue %d.\n", queue);
+		logrus.Info(fmt.Sprintf("considering queue %d.", queue))
 		for i := 0; i < int(p.NumPlayers); i++ {
 			// we're going to do a lot of logic here in consideration of endpoint i.
 			// keep accumulating the minimum confirmed point for all n*n packets and
@@ -242,13 +226,13 @@ func (p *Peer2PeerBackend) PollNPlayers(currentFrame int64) int64 {
 
 			queueConnected = queueConnected && connected
 			queueMinConfirmed = int64(lib.MIN(lastReceived, queueMinConfirmed))
-			//Log("  endpoint %d: connected = %d, last_received = %d, queueMinConfirmed = %d.\n", i, connected, last_received, queueMinConfirmed)
+			logrus.Info(fmt.Sprintf("endpoint %d: connected = %d, last_received = %d, queueMinConfirmed = %d.", i, connected, lastReceived, queueMinConfirmed))
 		}
 		// merge in our local status only if we're still connected!
 		if p.LocalConnectStatus[queue].Disconnected == 0 {
 			queueMinConfirmed = lib.MIN(p.LocalConnectStatus[queue].LastFrame, queueMinConfirmed)
 		}
-		//Log("  local endp: connected = %d, last_received = %d, queueMinConfirmed = %d.\n", p.LocalConnectStatus[queue].Disconnected == 0, p.LocalConnectStatus[queue].LastFrame, queueMinConfirmed)
+		logrus.Info(fmt.Sprintf("local endp: connected = %d, last_received = %d, queueMinConfirmed = %d.", p.LocalConnectStatus[queue].Disconnected == 0, p.LocalConnectStatus[queue].LastFrame, queueMinConfirmed))
 
 		if queueConnected {
 			totalMinConfirmed = lib.MIN(queueMinConfirmed, totalMinConfirmed)
@@ -257,16 +241,37 @@ func (p *Peer2PeerBackend) PollNPlayers(currentFrame int64) int64 {
 			// so, we need to re-adjust.  This can happen when we detect our own disconnect at frame n
 			// and later receive a disconnect notification for frame n-1.
 			if p.LocalConnectStatus[queue].Disconnected == 0 || p.LocalConnectStatus[queue].LastFrame > queueMinConfirmed {
-				//Log("disconnecting queue %d by remote request.\n", queue)
+				logrus.Info(fmt.Sprintf("disconnecting queue %d by remote request.", queue))
 				p.DisconnectPlayerQueue(int64(queue), queueMinConfirmed)
 			}
 		}
-		//Log("  totalMinConfirmed = %d.\n", totalMinConfirmed)
+		logrus.Info(fmt.Sprintf("  totalMinConfirmed = %d.", totalMinConfirmed))
 	}
 	return totalMinConfirmed
 }
 
+func (p *Peer2PeerBackend) AddPlayer(player *ggponet.GGPOPlayer, handle *ggponet.GGPOPlayerHandle) ggponet.GGPOErrorCode {
+	if player.Type == ggponet.GGPO_PLAYERTYPE_SPECTATOR {
+		return p.AddSpectator(player.IPAddress, player.Port)
+	}
+
+	queue := player.PlayerNum - 1
+	p.Players[queue] = *player
+	if player.PlayerNum < 1 || player.PlayerNum > p.NumPlayers {
+		return ggponet.GGPO_ERRORCODE_PLAYER_OUT_OF_RANGE
+	}
+	*handle = p.QueueToPlayerHandle(queue)
+
+	if player.Type == ggponet.GGPO_PLAYERTYPE_REMOTE {
+		p.AddRemotePlayer(player, queue)
+	}
+
+	return ggponet.GGPO_OK
+}
+
 func (p *Peer2PeerBackend) IncrementFrame() ggponet.GGPOErrorCode {
+
+	logrus.Info(fmt.Sprintf("End of frame (%d)...", p.Sync.FrameCount))
 	p.Sync.IncrementFrame()
 	p.DoPoll()
 	//p.PollSyncEvents();
@@ -287,8 +292,8 @@ func (p *Peer2PeerBackend) DisconnectPlayer(player ggponet.GGPOPlayerHandle) ggp
 		return ggponet.GGPO_ERRORCODE_PLAYER_DISCONNECTED
 	}
 
-	currentFrame := p.Sync.GetFrameCount()
-	//log.Logger("Disconnecting local player %d at frame %d by user request.\n", queue, p.LocalConnectStatus[queue].LastFrame)
+	currentFrame := p.Sync.FrameCount
+	logrus.Info(fmt.Sprintf("Disconnecting local player %d at frame %d by user request.", queue, p.LocalConnectStatus[queue].LastFrame))
 	var i int64 = 0
 	for ; i < p.NumPlayers; i++ {
 		p.DisconnectPlayerQueue(i, currentFrame)
@@ -299,7 +304,7 @@ func (p *Peer2PeerBackend) DisconnectPlayer(player ggponet.GGPOPlayerHandle) ggp
 
 func (p *Peer2PeerBackend) DisconnectPlayerQueue(queue int64, syncto int64) {
 	var info ggponet.GGPOEvent
-	framecount := p.Sync.GetFrameCount()
+	framecount := p.Sync.FrameCount
 
 	p.Endpoints[queue].Disconnect()
 

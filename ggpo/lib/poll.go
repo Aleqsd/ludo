@@ -3,6 +3,8 @@ package lib
 import (
 	"math"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type HANDLE int
@@ -22,7 +24,6 @@ type Poll struct {
 	PeriodicSinks StaticBuffer
 }
 
-//TODO: Here, cf commented lines in Pump
 type IPollSink interface {
 	OnHandlePoll(cookie []byte)
 	OnMsgPoll(cookie []byte)
@@ -63,20 +64,42 @@ func (p *Poll) Init() {
 
 }
 
-func (p *Poll) RegisterHandle(s *IPollSink, h HANDLE, cookie []byte) {
+func (p *Poll) RegisterHandle(sink *IPollSink, h HANDLE, cookie []byte) {
+
+	if p.HandleCount >= MAX_POLLABLE_HANDLES-1 {
+		logrus.Panic("Assert error on HandleCount too high")
+	}
+
 	p.Handles[p.HandleCount] = h
+	var pollSink PollSinkCb
+	pollSink.Init(sink, cookie)
+	p.HandleSinks[p.HandleCount] = pollSink
+	p.HandleCount++
 }
 
-func (p *Poll) RegisterMsgLoop() {
+//TODO: Here, cf commented lines those functions
+func (p *Poll) RegisterMsgLoop(sink *IPollSink, cookie []byte) {
+	var pollSink PollSinkCb
+	pollSink.Init(sink, cookie)
+	//p.MsgSinks.PushBack(pollSink)
 }
 
-func (p *Poll) RegisterLoop() {
+func (p *Poll) RegisterLoop(sink *IPollSink, cookie []byte) {
+	var pollSink PollSinkCb
+	pollSink.Init(sink, cookie)
+	//p.MsgSinks.PushBack(pollSink)
 }
 
-func (p *Poll) RegisterPeriodic() {
+func (p *Poll) RegisterPeriodic(sink *IPollSink, interval int64, cookie []byte) {
+	var pollPeriodicSink PollPeriodicSinkCb
+	pollPeriodicSink.Init(sink, cookie, interval)
+	//p.MsgSinks.PushBack(pollPeriodicSink)
 }
 
 func (p *Poll) Run() {
+	for p.Pump(100) {
+		continue
+	}
 }
 
 func (p *Poll) Pump(timeout int64) bool {
@@ -100,6 +123,7 @@ func (p *Poll) Pump(timeout int64) bool {
 	//    finished = !_handle_sinks[i].sink->OnHandlePoll(_handle_sinks[i].cookie) || finished;
 	// }
 
+	//TODO: Here, cf commented lines here
 	var i int64
 	for i = 0; i < p.MsgSinks.Size; i++ {
 		//var cb PollSinkCb = p.MsgSinks.Get(i).(PollSinkCb)

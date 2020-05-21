@@ -1,5 +1,11 @@
 package lib
 
+import (
+	"fmt"
+
+	"github.com/sirupsen/logrus"
+)
+
 const (
 	FRAME_WINDOW_SIZE   = 40
 	MIN_UNIQUE_FRAMES   = 10
@@ -58,7 +64,7 @@ func (t *TimeSync) RecommendFrameWaitDuration(requireIdleInput bool) int64 {
 	// sleep for.
 	sleepFrames := int64(((radvantage - advantage) / 2) + 0.5)
 
-	//Log("iteration %d:  sleep frames is %d\n", t.Count, sleepFrames)
+	logrus.Info(fmt.Sprintf("iteration %d:  sleep frames is %d", t.Count, sleepFrames))
 
 	// Some things just aren't worth correcting for.  Make sure
 	// the difference is relevant before proceeding.
@@ -73,12 +79,12 @@ func (t *TimeSync) RecommendFrameWaitDuration(requireIdleInput bool) int64 {
 	if requireIdleInput {
 		for i := 1; i < len(t.LastInputs); i++ {
 			if !t.LastInputs[i].Equal(t.LastInputs[0], true) {
-				//Log("iteration %d:  rejecting due to input stuff at position %d...!!!\n", t.Count, i)
+				logrus.Info(fmt.Sprintf("iteration %d:  rejecting due to input stuff at position %d...!!!", t.Count, i))
 				return int64(0)
 			}
 		}
 	}
 
 	// Success!!! Recommend the number of frames to sleep and adjust
-	return int64(MIN(sleepFrames, MAX_FRAME_ADVANTAGE))
+	return MIN(sleepFrames, MAX_FRAME_ADVANTAGE)
 }

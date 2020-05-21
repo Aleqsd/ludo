@@ -1,9 +1,11 @@
 package lib
 
 import (
+	"fmt"
 	"unsafe"
 
 	"github.com/libretro/ludo/ggpo/ggponet"
+	"github.com/sirupsen/logrus"
 )
 
 const MAX_PREDICTION_FRAMES = 8
@@ -17,7 +19,22 @@ type Sync struct {
 	InputQueues         []InputQueue
 	Config              Config
 	Callbacks           ggponet.GGPOSessionCallbacks
+	EventQueue          RingBuffer
 	LocalConnectStatus  []ggponet.ConnectStatus
+}
+
+func (s *Sync) Init(config Config, ConnectStatus []ggponet.ConnectStatus) {
+	s.Config = config
+	s.Callbacks = config.Callbacks
+	s.FrameCount = 0
+	s.Rollingback = false
+	s.LocalConnectStatus = ConnectStatus
+
+	s.MaxPredictionFrames = config.NumPredictionFrames
+
+	s.EventQueue.Init(32)
+
+	s.CreateQueues(config)
 }
 
 type SavedFrame struct {
@@ -51,18 +68,6 @@ type Event struct {
 	Input          GameInput
 }
 
-func (s *Sync) Init(config Config, ConnectStatus []ggponet.ConnectStatus) {
-	s.Config = config
-	s.Callbacks = config.Callbacks
-	s.FrameCount = 0
-	s.Rollingback = false
-	s.LocalConnectStatus = ConnectStatus
-
-	s.MaxPredictionFrames = config.NumPredictionFrames
-
-	s.CreateQueues(config)
-}
-
 func (s *Sync) SetLastConfirmedFrame(frame int64) {
 	s.LastConfirmedFrame = frame
 	if s.LastConfirmedFrame > 0 {
@@ -72,21 +77,35 @@ func (s *Sync) SetLastConfirmedFrame(frame int64) {
 	}
 }
 
-func (s *Sync) SetFrameDelay(queue int64, delay int64) {
-	s.InputQueues[queue].SetFrameDelay(delay)
+func (s *Sync) AddLocalInput(queue int64, input *GameInput) bool {
+	framesBehind := s.FrameCount - s.LastConfirmedFrame
+	if s.FrameCount >= s.MaxPredictionFrames && framesBehind >= s.MaxPredictionFrames {
+		logrus.Info("Rejecting input from emulator: reached prediction barrier.")
+		return false
+	}
+
+	if s.FrameCount == 0 {
+		s.SaveCurrentFrame()
+	}
+
+	logrus.Info(fmt.Sprintf("Sending undelayed local frame %d to queue %d.\n", s.FrameCount, queue))
+	input.Frame = s.FrameCount
+	s.InputQueues[queue].AddInput(input)
+
+	return true
 }
 
-func (s *Sync) InRollback() bool {
-	return s.Rollingback
-}
-
-func (s *Sync) GetFrameCount() int64 {
-	return s.FrameCount
+func (s *Sync) AddRemoteInput(queue int64, input *GameInput) {
+	s.InputQueues[queue].AddInput(input)
 }
 
 func (s *Sync) GetConfirmedInputs(values []byte, size int64, frame int64) int64 {
-	disconnectFlags := 0
+	var disconnectFlags int64 = 0
 	output := values
+
+	if size < s.Config.NumPlayers*s.Config.InputSize {
+		logrus.Panic("Assert error size")
+	}
 
 	for i := 0; i < int(s.Config.NumPlayers); i++ {
 		var input GameInput
@@ -102,30 +121,16 @@ func (s *Sync) GetConfirmedInputs(values []byte, size int64, frame int64) int64 
 			}
 		}
 	}
-	return int64(disconnectFlags)
-}
-
-func (s *Sync) AddLocalInput(queue int64, input *GameInput) bool {
-	framesBehind := s.FrameCount - s.LastConfirmedFrame
-	if s.FrameCount >= s.MaxPredictionFrames && framesBehind >= s.MaxPredictionFrames {
-		//Log("Rejecting input from emulator: reached prediction barrier.\n")
-		return false
-	}
-
-	if s.FrameCount == 0 {
-		s.SaveCurrentFrame()
-	}
-
-	//Log("Sending undelayed local frame %d to queue %d.\n", s.FrameCount, queue)
-	input.Frame = s.FrameCount
-	s.InputQueues[queue].AddInput(input)
-
-	return true
+	return disconnectFlags
 }
 
 func (s *Sync) SynchronizeInputs(values []byte, size int64) int64 {
 	var disconnectedFlags int64 = 0
 	output := values
+
+	if size < s.Config.NumPlayers*s.Config.InputSize {
+		logrus.Panic("Assert error size")
+	}
 
 	output = make([]byte, size)
 	for i := 0; i < int(s.Config.NumPlayers); i++ {
@@ -154,32 +159,18 @@ func (s *Sync) IncrementFrame() {
 	s.SaveCurrentFrame()
 }
 
-func (s *Sync) CheckSimulationConsistency(seekTo *int64) bool {
-	firstIncorrect := NULL_FRAME
-	for i := 0; i < int(s.Config.NumPlayers); i++ {
-		incorrect := s.InputQueues[i].FirstIncorrectFrame
-		//Log("considering incorrect frame %d reported by queue %d.\n", incorrect, i)
-
-		if incorrect != NULL_FRAME && (firstIncorrect == NULL_FRAME || incorrect < int64(firstIncorrect)) {
-			firstIncorrect = int(incorrect)
-		}
-	}
-
-	if firstIncorrect == NULL_FRAME {
-		//Log("prediction ok.  proceeding.\n")
-		return true
-	}
-	*seekTo = int64(firstIncorrect)
-	return false
-}
-
 func (s *Sync) AdjustSimulation(seekTo int64) {
+	framecount := s.FrameCount
 	count := s.FrameCount - seekTo
 
+	logrus.Info("Catching up")
 	s.Rollingback = true
 
 	// Flush our input queue and load the last frame
 	s.LoadFrame(seekTo)
+	if s.FrameCount != seekTo {
+		logrus.Panic("Assert error seekTo")
+	}
 
 	//Advance frame by frame (stuffign notifications back to master)
 	s.ResetPrediction(s.FrameCount)
@@ -187,34 +178,42 @@ func (s *Sync) AdjustSimulation(seekTo int64) {
 		s.Callbacks.AdvanceFrame(0)
 	}
 
+	if s.FrameCount != framecount {
+		logrus.Panic("Assert error framecount")
+	}
+
 	s.Rollingback = false
+	logrus.Info("---")
 }
 
 func (s *Sync) LoadFrame(frame int64) {
 
 	// Find the frame in question
 	if frame == s.FrameCount {
+		logrus.Info("Skipping NOP")
 		return
 	}
 
 	// Move the head pointer back and load it up
 	s.SavedState.Head = s.FindSavedFrameIndex(frame)
-
 	var state *SavedFrame = &s.SavedState.Frames[s.SavedState.Head]
 
-	//Log("=== Loading frame info %d (size: %d  checksum: %08x).\n",state->frame, state->cbuf, state->checksum);
+	logrus.Info(fmt.Sprintf("=== Loading frame info %d (size: %d  checksum: %08x).\n", state.Frame, state.Cbuf, state.Checksum))
 
 	s.Callbacks.LoadGameState(state.Buf, state.Cbuf)
 
 	// Reset framecount and the head of the state ring-buffer to point in
 	// advance of the current frame (as if we had just finished executing it).
-
 	s.FrameCount = state.Frame
 	s.SavedState.Head = s.SavedState.Head + 1%int64(unsafe.Sizeof(s.SavedState.Frames))
 }
 
 // SaveCurrentFrame write everything into the head, then advance the head pointer
 func (s *Sync) SaveCurrentFrame() {
+	/*
+	 * See StateCompress for the real save feature implemented by FinalBurn.
+	 * Write everything into the head, then advance the head pointer.
+	 */
 	var state *SavedFrame = &s.SavedState.Frames[s.SavedState.Head]
 	if state.Buf != nil {
 		s.Callbacks.FreeBuffer(state.Buf)
@@ -223,7 +222,7 @@ func (s *Sync) SaveCurrentFrame() {
 	state.Frame = s.FrameCount
 	s.Callbacks.SaveGameState(&state.Buf, &state.Cbuf, &state.Checksum, state.Frame)
 
-	//Log("=== Saved frame info %d (size: %d  checksum: %08x).\n", state->frame, state->cbuf, state->checksum)
+	logrus.Info(fmt.Sprintf("=== Saved frame info %d (size: %d  checksum: %08x).\n", state.Frame, state.Cbuf, state.Checksum))
 	s.SavedState.Head = (s.SavedState.Head + 1) % int64(len(s.SavedState.Frames))
 }
 
@@ -244,7 +243,7 @@ func (s *Sync) FindSavedFrameIndex(frame int64) int64 {
 		}
 	}
 	if i == count {
-		panic("FindSavedFrameIndex i = count")
+		logrus.Panic("Assert Error FindSavedFrameIndex i == count")
 	}
 	return i
 }
@@ -258,8 +257,40 @@ func (s *Sync) CreateQueues(config Config) bool {
 	return true
 }
 
+func (s *Sync) CheckSimulationConsistency(seekTo *int64) bool {
+	firstIncorrect := NULL_FRAME
+	for i := 0; i < int(s.Config.NumPlayers); i++ {
+		incorrect := s.InputQueues[i].FirstIncorrectFrame
+		logrus.Info(fmt.Sprintf("considering incorrect frame %d reported by queue %d.", incorrect, i))
+
+		if incorrect != NULL_FRAME && (firstIncorrect == NULL_FRAME || incorrect < int64(firstIncorrect)) {
+			firstIncorrect = int(incorrect)
+		}
+	}
+
+	if firstIncorrect == NULL_FRAME {
+		logrus.Info("prediction ok.  proceeding.")
+		return true
+	}
+	*seekTo = int64(firstIncorrect)
+	return false
+}
+
+func (s *Sync) SetFrameDelay(queue int64, delay int64) {
+	s.InputQueues[queue].SetFrameDelay(delay)
+}
+
 func (s *Sync) ResetPrediction(frameNumber int64) {
 	for i := 0; i < int(s.Config.NumPlayers); i++ {
 		s.InputQueues[i].ResetPrediction(frameNumber)
 	}
+}
+
+func (s *Sync) GetEvent(e Event) bool {
+	if s.EventQueue.Size != 0 {
+		e = s.EventQueue.Front().(Event)
+		s.EventQueue.Pop()
+		return true
+	}
+	return false
 }

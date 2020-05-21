@@ -75,7 +75,7 @@ func (s *SyncTestBackend) AddLocalInput(player ggponet.GGPOPlayerHandle, values 
 
 	var index int64 = int64(player)
 	for i := 0; i < int(size); i++ {
-		s.CurrentInput.Bits[(index * size)] += values[i]
+		s.CurrentInput.Bits[(index * size)] |= values[i]
 	}
 	return ggponet.GGPO_OK
 }
@@ -85,7 +85,7 @@ func (s *SyncTestBackend) SyncInput(values []byte, size int64, disconnectFlags *
 		var saved SavedInfo = s.SavedFrame.Front().(SavedInfo)
 		s.LastInput = saved.Input
 	} else {
-		if s.Sync.GetFrameCount() == 0 {
+		if s.Sync.FrameCount == 0 {
 			s.Sync.SaveCurrentFrame()
 		}
 		s.LastInput = s.CurrentInput
@@ -100,13 +100,13 @@ func (s *SyncTestBackend) IncrementFrame() ggponet.GGPOErrorCode {
 	s.Sync.IncrementFrame()
 	s.CurrentInput.Erase()
 
-	logrus.Info(fmt.Sprintf("End of frame(%d)...\n", s.Sync.GetFrameCount))
+	logrus.Info(fmt.Sprintf("End of frame(%d)...\n", s.Sync.FrameCount))
 
 	if s.RollingBack {
 		return ggponet.GGPO_OK
 	}
 
-	frame := s.Sync.GetFrameCount()
+	frame := s.Sync.FrameCount
 	// Hold onto the current frame in our queue of saved states.  We'll need
 	// the checksum later to verify that our replay of the same frame got the
 	// same results.
@@ -131,12 +131,12 @@ func (s *SyncTestBackend) IncrementFrame() ggponet.GGPOErrorCode {
 			info = s.SavedFrame.Front().(SavedInfo)
 			s.SavedFrame.Pop()
 
-			if info.Frame != s.Sync.GetFrameCount() {
+			if info.Frame != s.Sync.FrameCount {
 				logrus.Info(fmt.Sprintf("Frame number %d does not match saved frame number %d", info.Frame, frame))
 			}
 			checksum := s.Sync.GetLastSavedFrame().Checksum
 			if info.Checksum != checksum {
-				logrus.Info(fmt.Sprintf("FrameCount : ", s.Sync.GetFrameCount, " , LastSavedFrame.buf : ", s.Sync.GetLastSavedFrame().Buf, " , LastSavedFrame.cbuf : ", s.Sync.GetLastSavedFrame().Cbuf))
+				logrus.Info(fmt.Sprintf("FrameCount : ", s.Sync.FrameCount, " , LastSavedFrame.buf : ", s.Sync.GetLastSavedFrame().Buf, " , LastSavedFrame.cbuf : ", s.Sync.GetLastSavedFrame().Cbuf))
 				logrus.Info(fmt.Sprintf("Checksum for frame %d does not match saved (%d != %d)", frame, checksum, info.Checksum))
 			}
 			println()
