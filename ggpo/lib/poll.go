@@ -1,5 +1,10 @@
 package lib
 
+import (
+	"math"
+	"time"
+)
+
 type HANDLE int
 
 const (
@@ -7,17 +12,17 @@ const (
 )
 
 type Poll struct {
-	StartTime int64
-	/*	HandleCount int64
-		Handles     [MAX_POLLABLE_HANDLES]HANDLE
-		HandleSinks [MAX_POLLABLE_HANDLES]PollSinkCb
+	StartTime   int64
+	HandleCount int64
+	Handles     [MAX_POLLABLE_HANDLES]HANDLE
+	HandleSinks [MAX_POLLABLE_HANDLES]PollSinkCb
 
-		MsgSinks      [16]PollSinkCb
-		LoopSinks     [16]PollSinkCb
-		PeriodicSinks [16]PollSinkCb*/
+	MsgSinks      StaticBuffer
+	LoopSinks     StaticBuffer
+	PeriodicSinks StaticBuffer
 }
 
-/*
+//TODO: Here, cf commented lines in Pump
 type IPollSink interface {
 	OnHandlePoll(cookie []byte)
 	OnMsgPoll(cookie []byte)
@@ -51,6 +56,9 @@ func (p *Poll) Init() {
 	p.HandleCount = 0
 	p.StartTime = 0
 
+	p.MsgSinks.Init(16)
+	p.LoopSinks.Init(16)
+	p.PeriodicSinks.Init(16)
 	//p.Handles[p.HandleCount++] = CreateEvent(NULL, true, false, NULL)
 
 }
@@ -72,7 +80,6 @@ func (p *Poll) Run() {
 }
 
 func (p *Poll) Pump(timeout int64) bool {
-	//var res int64
 	finished := false
 
 	if p.StartTime == 0 {
@@ -85,31 +92,33 @@ func (p *Poll) Pump(timeout int64) bool {
 		timeout = MIN(timeout, maxWait)
 	}
 
-	//TODO WaitForMultipleObjects ?
+	//TODO: WaitForMultipleObjects ?
+	//var res int64
 	// res = WaitForMultipleObjects(_handle_count, _handles, false, timeout);
 	// if (res >= WAIT_OBJECT_0 && res < WAIT_OBJECT_0 + _handle_count) {
 	//    i = res - WAIT_OBJECT_0;
 	//    finished = !_handle_sinks[i].sink->OnHandlePoll(_handle_sinks[i].cookie) || finished;
 	// }
 
-	for i := 0; i < len(p.MsgSinks); i++ {
-		var cb PollSinkCb = p.MsgSinks[i]
-		finished = !cb.Sink.OnMsgPoll(cb.Cookie) || finished
+	var i int64
+	for i = 0; i < p.MsgSinks.Size; i++ {
+		//var cb PollSinkCb = p.MsgSinks.Get(i).(PollSinkCb)
+		//finished = !cb.Sink.OnMsgPoll(cb.Cookie) || finished
 	}
 
-	for i := 0; i < len(p.PeriodicSinks); i++ {
+	for i = 0; i < p.PeriodicSinks.Size; i++ {
 		var cb PollPeriodicSinkCb
-		cb.PollSinkCbVal = p.PeriodicSinks[i]
+		cb.PollSinkCbVal = p.PeriodicSinks.Get(i).(PollSinkCb)
 		if cb.Interval+cb.LastFired <= elapsed {
-			cb.LastFired = (elapsed / cb.Interval) * cb.Interval
-			finished = !cb.Sink.OnPeriodicPoll(cb.PollSinkCbVal.Cookie, cb.LastFired) || finished
+			//cb.LastFired = (elapsed / cb.Interval) * cb.Interval
+			//finished = !cb.Sink.OnPeriodicPoll(cb.PollSinkCbVal.Cookie, cb.LastFired) || finished
 		}
 
 	}
 
-	for i := 0; i < len(p.LoopSinks); i++ {
-		var cb PollSinkCb = p.LoopSinks[i]
-		finished = !cb.Sink.OnLoopPoll(cb.Cookie) || finished
+	for i = 0; i < p.LoopSinks.Size; i++ {
+		//var cb PollSinkCb = p.LoopSinks.Get(i).(PollSinkCb)
+		//finished = !cb.Sink.OnLoopPoll(cb.Cookie) || finished
 	}
 
 	return finished
@@ -117,12 +126,13 @@ func (p *Poll) Pump(timeout int64) bool {
 
 func (p *Poll) ComputeWaitTime(elapsed int64) int64 {
 	var waitTime int64 = math.MaxInt64
-	count := len(p.PeriodicSinks)
+	count := p.PeriodicSinks.Size
 
+	var i int64
 	if count > 0 {
-		for i := 0; i < count; i++ {
+		for i = 0; i < count; i++ {
 			var cb PollPeriodicSinkCb
-			cb.PollSinkCbVal = p.PeriodicSinks[i]
+			cb.PollSinkCbVal = p.PeriodicSinks.Get(i).(PollSinkCb)
 			timeout := (cb.Interval + cb.LastFired) - elapsed
 			if waitTime == math.MaxInt64 || timeout < waitTime {
 				waitTime = MAX(timeout, 0)
@@ -130,4 +140,4 @@ func (p *Poll) ComputeWaitTime(elapsed int64) int64 {
 		}
 	}
 	return waitTime
-}*/
+}
