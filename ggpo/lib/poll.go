@@ -133,7 +133,7 @@ func (p *Poll) Pump(timeout int64) bool {
 	for i = 0; i < p.PeriodicSinks.Size; i++ {
 		var cb PollPeriodicSinkCb
 		cb.PollSinkCbVal = p.PeriodicSinks.Get(i).(PollSinkCb)
-		if cb.Interval+cb.LastFired <= elapsed {
+		if cb.Interval+cb.LastFired <= int64(elapsed) {
 			//cb.LastFired = (elapsed / cb.Interval) * cb.Interval
 			//finished = !cb.Sink.OnPeriodicPoll(cb.PollSinkCbVal.Cookie, cb.LastFired) || finished
 		}
@@ -149,7 +149,7 @@ func (p *Poll) Pump(timeout int64) bool {
 }
 
 func (p *Poll) ComputeWaitTime(elapsed uint64) uint64 {
-	var waitTime int64 = math.MaxInt64
+	var waitTime uint64 = math.MaxUint64
 	count := p.PeriodicSinks.Size
 
 	var i int64
@@ -157,9 +157,9 @@ func (p *Poll) ComputeWaitTime(elapsed uint64) uint64 {
 		for i = 0; i < count; i++ {
 			var cb PollPeriodicSinkCb
 			cb.PollSinkCbVal = p.PeriodicSinks.Get(i).(PollSinkCb)
-			timeout := (cb.Interval + cb.LastFired) - elapsed
+			timeout := uint64(cb.Interval+cb.LastFired) - elapsed
 			if waitTime == math.MaxInt64 || timeout < waitTime {
-				waitTime = MAX(timeout, 0)
+				waitTime = uint64(MAX(int64(timeout), 0))
 			}
 		}
 	}
