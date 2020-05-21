@@ -1,6 +1,9 @@
 package backend
 
 import (
+	"fmt"
+	"log"
+
 	"github.com/libretro/ludo/ggpo/ggponet"
 	"github.com/libretro/ludo/ggpo/lib"
 )
@@ -12,7 +15,6 @@ type SyncTestBackend struct {
 	LastVerified  int64
 	RollingBack   bool
 	Running       bool
-	Logfp         string
 	Game          string
 	CurrentInput  lib.GameInput
 	LastInput     lib.GameInput
@@ -35,7 +37,6 @@ func (s *SyncTestBackend) Init(cb *ggponet.GGPOSessionCallbacks, gamename string
 	s.LastVerified = 0
 	s.RollingBack = false
 	s.Running = false
-	s.Logfp = ""
 	s.Game = gamename
 	s.CurrentInput.Erase()
 	s.SavedFrame.Init(32)
@@ -43,8 +44,7 @@ func (s *SyncTestBackend) Init(cb *ggponet.GGPOSessionCallbacks, gamename string
 	var config lib.Config
 	config.Callbacks = s.Callbacks
 	config.NumPredictionFrames = lib.MAX_PREDICTION_FRAMES
-	//TODO: SyncInit ??
-	// lib.Sync.Init(config)
+	s.Sync.Init(config, s.Sync.LocalConnectStatus)
 
 	s.Callbacks.BeginGame(s.Game)
 }
@@ -64,8 +64,7 @@ func (s *SyncTestBackend) AddPlayer(player *ggponet.GGPOPlayer, handle *ggponet.
 	if player.PlayerNum < 1 || player.PlayerNum > s.NumPlayers {
 		return ggponet.GGPO_ERRORCODE_PLAYER_OUT_OF_RANGE
 	}
-	//TODO: Conversion handle to int ?
-	//*handle = player.PlayerNum-1
+	*handle = (ggponet.GGPOPlayerHandle)(player.PlayerNum - 1)
 	return ggponet.GGPO_OK
 }
 
@@ -82,9 +81,9 @@ func (s *SyncTestBackend) AddLocalInput(player ggponet.GGPOPlayerHandle, values 
 }
 
 func (s *SyncTestBackend) SyncInput(values []byte, size int64, disconnectFlags *int64) {
-	s.BeginLog(false)
 	if s.RollingBack {
-		s.LastInput = s.SavedFrame[0].input // TODO: Ringbuffer Front :       _last_input = _saved_frames.front().input;
+		var saved SavedInfo = s.SavedFrame.Front().(SavedInfo)
+		s.LastInput = saved.input
 	} else {
 		if s.Sync.GetFrameCount() == 0 {
 			s.Sync.SaveCurrentFrame()
@@ -92,18 +91,16 @@ func (s *SyncTestBackend) SyncInput(values []byte, size int64, disconnectFlags *
 		s.LastInput = s.CurrentInput
 	}
 	s.LastInput.Bits = values
-	//TODO: if *int ?
-	//if disconnectFlags {
-	//	*disconnectFlags = 0
-	//}
+	if *disconnectFlags == int64(1) {
+		*disconnectFlags = 0
+	}
 }
 
 func (s *SyncTestBackend) IncrementFrame() ggponet.GGPOErrorCode {
 	s.Sync.IncrementFrame()
 	s.CurrentInput.Erase()
 
-	//    Log("End of frame(%d)...\n", _sync.GetFrameCount());
-	s.Endlog()
+	log.Println(fmt.Sprintf("End of frame(%d)...\n", s.Sync.GetFrameCount))
 
 	if s.RollingBack {
 		return ggponet.GGPO_OK
@@ -116,43 +113,37 @@ func (s *SyncTestBackend) IncrementFrame() ggponet.GGPOErrorCode {
 	var info SavedInfo
 	info.frame = frame
 	info.input = s.LastInput
-	//TODO: no field cbuf in savedFrame ??
-	//info.cbuf = s.Sync.GetLastSavedFrame().cbuf
-	// info.buf = (char *)malloc(info.cbuf);
-	// memcpy(info.buf, _sync.GetLastSavedFrame().buf, info.cbuf);
-	// info.checksum = _sync.GetLastSavedFrame().checksum;
-	// _saved_frames.push(info);
+	info.cbuf = s.Sync.GetLastSavedFrame().cbuf
+	info.buf = s.Sync.GetLastSavedFrame().buf
+	info.checksum = s.Sync.GetLastSavedFrame().checksum
+	var t lib.T = &info
+	s.SavedFrame.Push(&t)
 
 	if frame-s.LastVerified == s.CheckDistance {
 		// We've gone far enough ahead and should now start replaying frames.
 		// Load the last verified frame and set the rollback flag to true.
 		s.Sync.LoadFrame(s.LastVerified)
 		s.RollingBack = true
-		//TODO: Implement Ringbuffer
 		for !s.SavedFrame.Empty() {
 			s.Callbacks.AdvanceFrame(0)
 
 			// Verify that the checksumn of this frame is the same as the one in our list
+			info = s.SavedFrame.Front().(SavedInfo)
+			s.SavedFrame.Pop()
+
+			if info.frame != s.Sync.GetFrameCount() {
+				log.Println(fmt.Sprintf("Frame number %d does not match saved frame number %d", info.frame, frame))
+			}
+			checksum := s.Sync.GetLastSavedFrame().checksum
+			if info.checksum != checksum {
+				log.Println("FrameCount : ", s.Sync.GetFrameCount, " , LastSavedFrame.buf : ", s.Sync.GetLastSavedFrame.buf, " , LastSavedFrame.cbuf : ", s.Sync.GetLastSavedFrame.cbuf)
+				log.Println(fmt.Sprintf("Checksum for frame %d does not match saved (%d != %d)", frame, checksum, info.checksum))
+			}
+			println()
+
 		}
+		s.LastVerified = frame
+		s.RollingBack = false
 	}
-}
-
-func (s *SyncTestBackend) RaiseSyncError() {
-
-}
-
-func (s *SyncTestBackend) Logv() {
-
-}
-
-func (s *SyncTestBackend) BeginLog(saving bool) {
-
-}
-
-func (s *SyncTestBackend) Endlog() {
-
-}
-
-func (s *SyncTestBackend) LogSaveStates() {
-
+	return ggponet.GGPO_OK
 }
