@@ -2,10 +2,10 @@ package backend
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/libretro/ludo/ggpo/ggponet"
 	"github.com/libretro/ludo/ggpo/lib"
+	"github.com/sirupsen/logrus"
 )
 
 type SyncTestBackend struct {
@@ -100,7 +100,7 @@ func (s *SyncTestBackend) IncrementFrame() ggponet.GGPOErrorCode {
 	s.Sync.IncrementFrame()
 	s.CurrentInput.Erase()
 
-	log.Println(fmt.Sprintf("End of frame(%d)...\n", s.Sync.GetFrameCount))
+	logrus.Info(fmt.Sprintf("End of frame(%d)...\n", s.Sync.GetFrameCount))
 
 	if s.RollingBack {
 		return ggponet.GGPO_OK
@@ -132,12 +132,12 @@ func (s *SyncTestBackend) IncrementFrame() ggponet.GGPOErrorCode {
 			s.SavedFrame.Pop()
 
 			if info.frame != s.Sync.GetFrameCount() {
-				log.Println(fmt.Sprintf("Frame number %d does not match saved frame number %d", info.frame, frame))
+				logrus.Info(fmt.Sprintf("Frame number %d does not match saved frame number %d", info.frame, frame))
 			}
 			checksum := s.Sync.GetLastSavedFrame().checksum
 			if info.checksum != checksum {
-				log.Println("FrameCount : ", s.Sync.GetFrameCount, " , LastSavedFrame.buf : ", s.Sync.GetLastSavedFrame.buf, " , LastSavedFrame.cbuf : ", s.Sync.GetLastSavedFrame.cbuf)
-				log.Println(fmt.Sprintf("Checksum for frame %d does not match saved (%d != %d)", frame, checksum, info.checksum))
+				logrus.Info(fmt.Sprintf("FrameCount : ", s.Sync.GetFrameCount, " , LastSavedFrame.buf : ", s.Sync.GetLastSavedFrame.buf, " , LastSavedFrame.cbuf : ", s.Sync.GetLastSavedFrame.cbuf))
+				logrus.Info(fmt.Sprintf("Checksum for frame %d does not match saved (%d != %d)", frame, checksum, info.checksum))
 			}
 			println()
 

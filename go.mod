@@ -16,6 +16,7 @@ require (
 	github.com/youpy/go-wav v0.0.0-20160223082350-b63a9887d320
 	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8
 	golang.org/x/mobile v0.0.0-20190607214518-6fa95d984e88
+	github.com/sirupsen/logrus v1.6.0
 )
 
 go 1.13
