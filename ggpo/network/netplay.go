@@ -321,3 +321,8 @@ func (n *Netplay) SetLocalFrameNumber(localFrame int64) {
 func (n *Netplay) RecommendFrameDelay() int64 {
 	return n.TimeSync.RecommendFrameWaitDuration(false)
 }
+
+func (n *Netplay) GetPeerConnectStatus(id int64, frame *int64) bool {
+	//TODO
+	return true
+}

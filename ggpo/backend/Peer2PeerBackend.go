@@ -16,7 +16,7 @@ const (
 )
 
 type Peer2PeerBackend struct {
-	//Poll                  _poll;
+	Poll                  lib.Poll
 	Spectators            [ggponet.GGPO_MAX_SPECTATORS]network.Netplay
 	LocalConnectStatus    []ggponet.ConnectStatus
 	Endpoints             []network.Netplay
@@ -37,6 +37,7 @@ func (p *Peer2PeerBackend) Init(cb ggponet.GGPOSessionCallbacks, gamename string
 	p.Callbacks = cb
 	p.Synchronizing = true
 	p.NextRecommendedSleep = 0
+	p.Poll.Init()
 	var config lib.Config = lib.Config{}
 	config.NumPlayers = p.NumPlayers
 	config.InputSize = p.InputSize
@@ -130,7 +131,7 @@ func (p *Peer2PeerBackend) SyncInput(values []byte, size int64, disconnectFlags 
 
 func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
 	if !p.Sync.Rollingback {
-		//_poll.Pump(0);
+		p.Poll.Pump(0)
 
 		p.PollNetplayEvents()
 
@@ -222,7 +223,7 @@ func (p *Peer2PeerBackend) PollNPlayers(currentFrame int64) int64 {
 			// we're going to do a lot of logic here in consideration of endpoint i.
 			// keep accumulating the minimum confirmed point for all n*n packets and
 			// throw away the rest.
-			connected := p.Endpoints[i].GetPeerConnectStatus(queue, &lastReceived)
+			connected := p.Endpoints[i].GetPeerConnectStatus(int64(queue), &lastReceived)
 
 			queueConnected = queueConnected && connected
 			queueMinConfirmed = int64(lib.MIN(lastReceived, queueMinConfirmed))
@@ -248,6 +249,10 @@ func (p *Peer2PeerBackend) PollNPlayers(currentFrame int64) int64 {
 		logrus.Info(fmt.Sprintf("  totalMinConfirmed = %d.", totalMinConfirmed))
 	}
 	return totalMinConfirmed
+}
+
+func (p *Peer2PeerBackend) PollNetplayEvents() {
+
 }
 
 func (p *Peer2PeerBackend) AddPlayer(player *ggponet.GGPOPlayer, handle *ggponet.GGPOPlayerHandle) ggponet.GGPOErrorCode {
