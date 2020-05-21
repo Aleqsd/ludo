@@ -3,23 +3,26 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/gob"
 	"fmt"
 	"math/rand"
 	"net"
-	"time"
 
 	"github.com/libretro/ludo/ggpo/bitvector"
 	"github.com/libretro/ludo/ggpo/ggponet"
 	"github.com/libretro/ludo/ggpo/lib"
+	"github.com/libretro/ludo/ggpo/platform"
 )
-
-func GetCurrentTimeMS() uint64 {
-	return uint64(time.Now().UnixNano() / int64(time.Millisecond))
-}
 
 type Event struct {
 	Input     lib.GameInput
 	PlayerNum int64
+}
+
+type OoPacket struct {
+	SendTime uint64
+	DestAddr *net.UDPAddr
+	Msg      *NetplayMsg
 }
 
 type State int64
@@ -56,6 +59,9 @@ type Netplay struct {
 	MagicNumber          uint64
 	NextSendSeq          uint64
 	SendQueue            lib.RingBuffer
+	SendLatency          int64
+	OopPercent           int64
+	OoPacket             OoPacket
 }
 
 func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []ggponet.ConnectStatus /*, poll lib.Poll, callbacks ggponet.GGPOSessionCallbacks*/) {
@@ -81,15 +87,22 @@ func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []gg
 		n.MagicNumber = rand.Uint64()
 	}
 
+	n.SendLatency = platform.GetConfigInt("ggpo.network.delay")
+	n.OopPercent = platform.GetConfigInt("ggpo.oop.percent")
+	n.OoPacket.Msg = nil
+
 	//Log("binding udp socket to port %d.\n", port);
 }
 
-func (n *Netplay) Write(netoutput []byte) {
+func (n *Netplay) Write(msg *NetplayMsg) {
 	var err error
+	var buffer bytes.Buffer
+	encoder := gob.NewEncoder(&buffer)
+	encoder.Encode(msg)
 	if n.IsHosting {
-		_, err = n.Conn.WriteToUDP(netoutput, n.RemoteAddr)
+		_, err = n.Conn.WriteToUDP(buffer.Bytes(), n.RemoteAddr)
 	} else {
-		_, err = n.Conn.Write(netoutput)
+		_, err = n.Conn.Write(buffer.Bytes())
 	}
 	if err != nil {
 		fmt.Println(err)
@@ -98,17 +111,20 @@ func (n *Netplay) Write(netoutput []byte) {
 }
 
 func (n *Netplay) Read() {
+	var msg *NetplayMsg
 	for {
-		netinput := make([]byte, lib.GAMEINPUT_MAX_BYTES*lib.GAMEINPUT_MAX_PLAYERS)
-		l, _, err := n.Conn.ReadFromUDP(netinput)
+		netinput := make([]byte, 4096)
+		length, _, err := n.Conn.ReadFromUDP(netinput)
 		if err != nil {
 			fmt.Println(err)
 			n.PeerConnectStatus = false
 			return
 		}
 		n.PeerConnectStatus = true
-		fmt.Printf(string(netinput[0:l]))
-		//TODO: Créer un channel pour stocker les inputs qui arrivent
+		buffer := bytes.NewBuffer(netinput[:length])
+		decoder := gob.NewDecoder(buffer)
+		decoder.Decode(msg)
+		//TODO: Créer un channel pour stocker les inputs qui arrivent : channel <- msg
 	}
 }
 
@@ -175,7 +191,7 @@ func (n *Netplay) SendPendingOutput() {
 
 func (n *Netplay) SendMsg(msg *NetplayMsg) {
 	n.PacketsSent++
-	n.LastSendTime = GetCurrentTimeMS()
+	n.LastSendTime = platform.GetCurrentTimeMS()
 	n.BytesSent += msg.PacketSize()
 
 	msg.Hdr.Magic = n.MagicNumber
@@ -183,14 +199,41 @@ func (n *Netplay) SendMsg(msg *NetplayMsg) {
 	msg.Hdr.SequenceNumber = n.NextSendSeq
 
 	var queue QueueEntry
-	queue.Init(GetCurrentTimeMS(), n.RemoteAddr, msg)
+	queue.Init(platform.GetCurrentTimeMS(), n.RemoteAddr, msg)
 	var t lib.T = &queue
 	n.SendQueue.Push(&t)
 	n.PumpSendQueue()
 }
 
 func (n *Netplay) PumpSendQueue() {
+	for !n.SendQueue.Empty() {
+		var entry QueueEntry = n.SendQueue.Front().(QueueEntry)
 
+		if n.SendLatency > 0 {
+			// should really come up with a gaussian distributation based on the configured
+			// value, but this will do for now.
+			jitter := (n.SendLatency * 2 / 3) + ((rand.Int63() % n.SendLatency) / 3)
+			if platform.GetCurrentTimeMS() < (n.SendQueue.Front().(QueueEntry).QueueTime + uint64(jitter)) {
+				break
+			}
+		}
+		if n.OopPercent > 0 && n.OoPacket.Msg == nil && ((rand.Int63() % 100) < n.OopPercent) {
+			delay := rand.Int63() % (n.SendLatency*10 + 1000)
+			//Log("creating rogue oop (seq: %d  delay: %d)\n", entry.msg.Hdr.SequenceNumber, delay)
+			n.OoPacket.SendTime = platform.GetCurrentTimeMS() + uint64(delay)
+			n.OoPacket.Msg = entry.Msg
+			n.OoPacket.DestAddr = entry.DestAddr
+		} else {
+			n.Write(entry.Msg)
+			entry.Msg = nil
+		}
+		n.SendQueue.Pop()
+	}
+	if n.OoPacket.Msg != nil && n.OoPacket.SendTime < platform.GetCurrentTimeMS() {
+		//Log("sending rogue oop!")
+		n.Write(n.OoPacket.Msg)
+		n.OoPacket.Msg = nil
+	}
 }
 
 func (n *Netplay) ReceiveInput() Event {
