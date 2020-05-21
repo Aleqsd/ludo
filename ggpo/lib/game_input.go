@@ -1,6 +1,11 @@
 package lib
 
-import "bytes"
+import (
+	"bytes"
+	"fmt"
+
+	"github.com/sirupsen/logrus"
+)
 
 const (
 	GAMEINPUT_MAX_BYTES   = 9
@@ -15,8 +20,8 @@ type GameInput struct {
 }
 
 func (g *GameInput) Init(iframe int64, ibits []byte, isize int64, offset int64) {
-	if isize > GAMEINPUT_MAX_BYTES*GAMEINPUT_MAX_PLAYERS {
-		return
+	if isize > GAMEINPUT_MAX_BYTES*GAMEINPUT_MAX_PLAYERS || isize == 0 {
+		logrus.Panic("Size Error")
 	}
 	g.Frame = iframe
 	g.Size = isize
@@ -31,8 +36,8 @@ func (g *GameInput) Init(iframe int64, ibits []byte, isize int64, offset int64) 
 }
 
 func (g *GameInput) SimpleInit(iframe int64, ibits []byte, isize int64) {
-	if isize > GAMEINPUT_MAX_BYTES*GAMEINPUT_MAX_PLAYERS {
-		return
+	if isize > GAMEINPUT_MAX_BYTES*GAMEINPUT_MAX_PLAYERS || isize == 0 {
+		logrus.Panic("Size Error")
 	}
 	g.Frame = iframe
 	g.Size = isize
@@ -43,6 +48,22 @@ func (g *GameInput) SimpleInit(iframe int64, ibits []byte, isize int64) {
 }
 
 func (g *GameInput) Equal(other GameInput, bitsonly bool) bool {
+	if !bitsonly && g.Frame != other.Frame {
+		logrus.Info(fmt.Sprintf("frames don't match: %d, %d", g.Frame, other.Frame))
+	}
+
+	if g.Size != other.Size {
+		logrus.Info(fmt.Sprintf("sizes don't match: %d, %d", g.Size, other.Size))
+	}
+
+	if bytes.Compare(g.Bits, other.Bits) != 0 {
+		logrus.Info("bits don't match")
+	}
+
+	if g.Size != other.Size {
+		logrus.Panic("sizes don't match")
+	}
+
 	return (bitsonly || g.Frame == other.Frame) && g.Size == other.Size && bytes.Compare(g.Bits, other.Bits) == 0
 }
 

@@ -23,11 +23,11 @@ type SyncTestBackend struct {
 }
 
 type SavedInfo struct {
-	frame    int64
-	checksum int64
-	buf      string
-	cbuf     int64
-	input    lib.GameInput
+	Frame    int64
+	Checksum int64
+	Buf      *byte
+	Cbuf     int64
+	Input    lib.GameInput
 }
 
 func (s *SyncTestBackend) Init(cb *ggponet.GGPOSessionCallbacks, gamename string, frames int64, numPlayers int64) {
@@ -83,7 +83,7 @@ func (s *SyncTestBackend) AddLocalInput(player ggponet.GGPOPlayerHandle, values 
 func (s *SyncTestBackend) SyncInput(values []byte, size int64, disconnectFlags *int64) {
 	if s.RollingBack {
 		var saved SavedInfo = s.SavedFrame.Front().(SavedInfo)
-		s.LastInput = saved.input
+		s.LastInput = saved.Input
 	} else {
 		if s.Sync.GetFrameCount() == 0 {
 			s.Sync.SaveCurrentFrame()
@@ -111,11 +111,11 @@ func (s *SyncTestBackend) IncrementFrame() ggponet.GGPOErrorCode {
 	// the checksum later to verify that our replay of the same frame got the
 	// same results.
 	var info SavedInfo
-	info.frame = frame
-	info.input = s.LastInput
-	info.cbuf = s.Sync.GetLastSavedFrame().cbuf
-	info.buf = s.Sync.GetLastSavedFrame().buf
-	info.checksum = s.Sync.GetLastSavedFrame().checksum
+	info.Frame = frame
+	info.Input = s.LastInput
+	info.Cbuf = s.Sync.GetLastSavedFrame().Cbuf
+	info.Buf = s.Sync.GetLastSavedFrame().Buf
+	info.Checksum = s.Sync.GetLastSavedFrame().Checksum
 	var t lib.T = &info
 	s.SavedFrame.Push(&t)
 
@@ -131,13 +131,13 @@ func (s *SyncTestBackend) IncrementFrame() ggponet.GGPOErrorCode {
 			info = s.SavedFrame.Front().(SavedInfo)
 			s.SavedFrame.Pop()
 
-			if info.frame != s.Sync.GetFrameCount() {
-				logrus.Info(fmt.Sprintf("Frame number %d does not match saved frame number %d", info.frame, frame))
+			if info.Frame != s.Sync.GetFrameCount() {
+				logrus.Info(fmt.Sprintf("Frame number %d does not match saved frame number %d", info.Frame, frame))
 			}
-			checksum := s.Sync.GetLastSavedFrame().checksum
-			if info.checksum != checksum {
-				logrus.Info(fmt.Sprintf("FrameCount : ", s.Sync.GetFrameCount, " , LastSavedFrame.buf : ", s.Sync.GetLastSavedFrame.buf, " , LastSavedFrame.cbuf : ", s.Sync.GetLastSavedFrame.cbuf))
-				logrus.Info(fmt.Sprintf("Checksum for frame %d does not match saved (%d != %d)", frame, checksum, info.checksum))
+			checksum := s.Sync.GetLastSavedFrame().Checksum
+			if info.Checksum != checksum {
+				logrus.Info(fmt.Sprintf("FrameCount : ", s.Sync.GetFrameCount, " , LastSavedFrame.buf : ", s.Sync.GetLastSavedFrame().Buf, " , LastSavedFrame.cbuf : ", s.Sync.GetLastSavedFrame().Cbuf))
+				logrus.Info(fmt.Sprintf("Checksum for frame %d does not match saved (%d != %d)", frame, checksum, info.Checksum))
 			}
 			println()
 

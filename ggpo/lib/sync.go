@@ -21,22 +21,22 @@ type Sync struct {
 }
 
 type SavedFrame struct {
-	buf      *byte
-	cbuf     int64
-	frame    int64
-	checksum int64
+	Buf      *byte
+	Cbuf     int64
+	Frame    int64
+	Checksum int64
 }
 
 func (s *SavedFrame) Init() {
-	s.buf = nil
-	s.cbuf = 0
-	s.frame = -1
-	s.checksum = 0
+	s.Buf = nil
+	s.Cbuf = 0
+	s.Frame = -1
+	s.Checksum = 0
 }
 
 type SavedState struct {
-	frames [MAX_PREDICTION_FRAMES + 2]SavedFrame
-	head   int64
+	Frames [MAX_PREDICTION_FRAMES + 2]SavedFrame
+	Head   int64
 }
 
 type Config struct {
@@ -198,48 +198,48 @@ func (s *Sync) LoadFrame(frame int64) {
 	}
 
 	// Move the head pointer back and load it up
-	s.SavedState.head = s.FindSavedFrameIndex(frame)
+	s.SavedState.Head = s.FindSavedFrameIndex(frame)
 
-	var state *SavedFrame = &s.SavedState.frames[s.SavedState.head]
+	var state *SavedFrame = &s.SavedState.Frames[s.SavedState.Head]
 
 	//Log("=== Loading frame info %d (size: %d  checksum: %08x).\n",state->frame, state->cbuf, state->checksum);
 
-	s.Callbacks.LoadGameState(state.buf, state.cbuf)
+	s.Callbacks.LoadGameState(state.Buf, state.Cbuf)
 
 	// Reset framecount and the head of the state ring-buffer to point in
 	// advance of the current frame (as if we had just finished executing it).
 
-	s.FrameCount = state.frame
-	s.SavedState.head = s.SavedState.head + 1%int64(unsafe.Sizeof(s.SavedState.frames))
+	s.FrameCount = state.Frame
+	s.SavedState.Head = s.SavedState.Head + 1%int64(unsafe.Sizeof(s.SavedState.Frames))
 }
 
 // SaveCurrentFrame write everything into the head, then advance the head pointer
 func (s *Sync) SaveCurrentFrame() {
-	var state *SavedFrame = &s.SavedState.frames[s.SavedState.head]
-	if state.buf != nil {
-		s.Callbacks.FreeBuffer(state.buf)
-		state.buf = nil
+	var state *SavedFrame = &s.SavedState.Frames[s.SavedState.Head]
+	if state.Buf != nil {
+		s.Callbacks.FreeBuffer(state.Buf)
+		state.Buf = nil
 	}
-	state.frame = s.FrameCount
-	s.Callbacks.SaveGameState(&state.buf, &state.cbuf, &state.checksum, state.frame)
+	state.Frame = s.FrameCount
+	s.Callbacks.SaveGameState(&state.Buf, &state.Cbuf, &state.Checksum, state.Frame)
 
 	//Log("=== Saved frame info %d (size: %d  checksum: %08x).\n", state->frame, state->cbuf, state->checksum)
-	s.SavedState.head = (s.SavedState.head + 1) % int64(len(s.SavedState.frames))
+	s.SavedState.Head = (s.SavedState.Head + 1) % int64(len(s.SavedState.Frames))
 }
 
 func (s *Sync) GetLastSavedFrame() SavedFrame {
-	i := s.SavedState.head - 1
+	i := s.SavedState.Head - 1
 	if i < 0 {
-		i = int64(unsafe.Sizeof(s.SavedState.frames)) - 1
+		i = int64(unsafe.Sizeof(s.SavedState.Frames)) - 1
 	}
-	return s.SavedState.frames[i]
+	return s.SavedState.Frames[i]
 }
 
 func (s *Sync) FindSavedFrameIndex(frame int64) int64 {
-	var i int64 = int64(unsafe.Sizeof(s.SavedState.frames))
-	var count int64 = int64(unsafe.Sizeof(s.SavedState.frames))
+	var i int64 = int64(unsafe.Sizeof(s.SavedState.Frames))
+	var count int64 = int64(unsafe.Sizeof(s.SavedState.Frames))
 	for i = 0; i < count; i++ {
-		if s.SavedState.frames[i].frame == frame {
+		if s.SavedState.Frames[i].Frame == frame {
 			break
 		}
 	}
