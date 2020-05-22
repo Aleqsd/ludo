@@ -196,8 +196,8 @@ func (n *Netplay) SendMsg(msg *NetplayMsg) {
 	n.BytesSent += msg.PacketSize()
 
 	msg.Hdr.Magic = n.MagicNumber
-	n.NextSendSeq++
 	msg.Hdr.SequenceNumber = n.NextSendSeq
+	n.NextSendSeq++
 
 	var queue QueueEntry
 	queue.Init(platform.GetCurrentTimeMS(), n.RemoteAddr, msg)
