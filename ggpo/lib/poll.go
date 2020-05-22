@@ -1,9 +1,5 @@
 package lib
 
-import (
-	"github.com/sirupsen/logrus"
-)
-
 type Poll struct {
 	LoopSinks StaticBuffer
 }
@@ -23,12 +19,7 @@ func (p *PollSinkCb) Init(s *IPollSink, c []byte) {
 }
 
 func (p *Poll) Init() {
-	var err error
 	p.LoopSinks.Init(16)
-	if err != nil {
-		logrus.Panic("Assert error on CreateEvent")
-	}
-
 }
 
 func (p *Poll) RegisterLoop(sink *IPollSink, cookie []byte) {
