@@ -51,7 +51,6 @@ const (
 
 type Netplay struct {
 	Callbacks            ggponet.GGPOSessionCallbacks
-	Poll                 lib.Poll
 	Conn                 *net.UDPConn
 	LocalAddr            *net.UDPAddr
 	RemoteAddr           *net.UDPAddr
@@ -84,7 +83,7 @@ type Netplay struct {
 	NetplayState         StateType
 }
 
-func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []ggponet.ConnectStatus, poll *lib.Poll /*, callbacks ggponet.GGPOSessionCallbacks*/) {
+func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []ggponet.ConnectStatus, poll *lib.Poll) {
 	//n.Callbacks = callbacks
 	//n.Poll = poll
 	//n.Poll.RegisterLoop(n)
