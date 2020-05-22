@@ -131,7 +131,7 @@ func (p *Peer2PeerBackend) SyncInput(values []byte, size int64, disconnectFlags 
 
 func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
 	if !p.Sync.Rollingback {
-		p.Poll.Pump(0)
+		p.Poll.Pump()
 
 		p.PollNetplayEvents()
 
