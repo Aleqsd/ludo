@@ -57,12 +57,13 @@ func (p *Peer2PeerBackend) Init(cb ggponet.GGPOSessionCallbacks, gamename string
 
 func (p *Peer2PeerBackend) AddRemotePlayer(player *ggponet.GGPOPlayer, queue int64) {
 	p.Synchronizing = true
-	p.Endpoints[queue].Init(*player, queue, p.LocalConnectStatus)
+	p.Endpoints[queue].Init(*player, queue, p.LocalConnectStatus, &p.Poll)
 	if p.MustHostConnection(queue) {
 		p.Endpoints[queue].HostConnection()
 	} else {
 		p.Endpoints[queue].JoinConnection()
 	}
+	//TODO: rajouter le timeout et le syncrequest
 }
 
 func (p *Peer2PeerBackend) MustHostConnection(other int64) bool {
@@ -133,7 +134,7 @@ func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
 	if !p.Sync.Rollingback {
 		p.Poll.Pump()
 
-		p.PollNetplayEvents()
+		p.PollNetplayEvents() //TODO
 
 		if !p.Synchronizing {
 			p.Sync.CheckSimulation()
@@ -258,7 +259,7 @@ func (p *Peer2PeerBackend) PollNPlayers(currentFrame int64) int64 {
 }
 
 func (p *Peer2PeerBackend) PollNetplayEvents() {
-
+	//TODO
 }
 
 func (p *Peer2PeerBackend) AddPlayer(player *ggponet.GGPOPlayer, handle *ggponet.GGPOPlayerHandle) ggponet.GGPOErrorCode {
@@ -285,7 +286,7 @@ func (p *Peer2PeerBackend) IncrementFrame() ggponet.GGPOErrorCode {
 	logrus.Info(fmt.Sprintf("End of frame (%d)...", p.Sync.FrameCount))
 	p.Sync.IncrementFrame()
 	p.DoPoll()
-	//p.PollSyncEvents();
+	//p.PollSyncEvents(); //TODO
 
 	return ggponet.GGPO_OK
 }
@@ -345,7 +346,7 @@ func (p *Peer2PeerBackend) GetNetworkStats(stats *ggponet.GGPONetworkStats, play
 	}
 
 	//stats = make([]byte, unsafe.Sizeof(*stats))
-	//p.Endpoints[queue].GetNetworkStats(stats)
+	//p.Endpoints[queue].GetNetworkStats(stats) //TODO
 
 	return ggponet.GGPO_OK
 }

@@ -5,26 +5,24 @@ type Poll struct {
 }
 
 type IPollSink interface {
-	OnLoopPoll(cookie []byte) bool
+	OnLoopPoll() bool
 }
 
 type PollSinkCb struct {
-	Sink   *IPollSink
-	Cookie []byte
+	Sink *IPollSink
 }
 
-func (p *PollSinkCb) Init(s *IPollSink, c []byte) {
+func (p *PollSinkCb) Init(s *IPollSink) {
 	p.Sink = s
-	p.Cookie = c
 }
 
 func (p *Poll) Init() {
 	p.LoopSinks.Init(16)
 }
 
-func (p *Poll) RegisterLoop(sink *IPollSink, cookie []byte) {
+func (p *Poll) RegisterLoop(sink *IPollSink) {
 	var pollSink PollSinkCb
-	pollSink.Init(sink, cookie)
+	pollSink.Init(sink)
 	var u U = &pollSink
 	p.LoopSinks.PushBack(&u)
 }
@@ -35,7 +33,7 @@ func (p *Poll) Pump() bool {
 	for i = 0; i < p.LoopSinks.Size; i++ {
 		var cb PollSinkCb = p.LoopSinks.Get(i).(PollSinkCb)
 		var s IPollSink = *cb.Sink
-		finished = !s.OnLoopPoll(cb.Cookie) || finished
+		finished = !s.OnLoopPoll() || finished
 	}
 
 	return finished

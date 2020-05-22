@@ -8,7 +8,7 @@ const (
 )
 
 type GGPOSession interface {
-	DoPoll(timeout int64) GGPOErrorCode
+	DoPoll() GGPOErrorCode
 	AddPlayer(player *GGPOPlayer, handle *GGPOPlayerHandle) GGPOErrorCode
 	AddLocalInput(player GGPOPlayerHandle, values []byte, size int64) GGPOErrorCode
 	SyncInput(values []byte, size int64, disconnectFlags *int64) GGPOErrorCode

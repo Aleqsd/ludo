@@ -84,7 +84,7 @@ type Netplay struct {
 	NetplayState         StateType
 }
 
-func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []ggponet.ConnectStatus /*, poll lib.Poll, callbacks ggponet.GGPOSessionCallbacks*/) {
+func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []ggponet.ConnectStatus, poll *lib.Poll /*, callbacks ggponet.GGPOSessionCallbacks*/) {
 	//n.Callbacks = callbacks
 	//n.Poll = poll
 	//n.Poll.RegisterLoop(n)
@@ -111,7 +111,10 @@ func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []gg
 	n.OopPercent = platform.GetConfigInt("ggpo.oop.percent")
 	n.OoPacket.Msg = nil
 
-	//logrus.Info(fmt.Sprintf("binding udp socket to port %d.", port))
+	var i lib.IPollSink = n
+	poll.RegisterLoop(&i)
+
+	logrus.Info(fmt.Sprintf("binding udp socket to port %d.", n.LocalAddr.Port))
 }
 
 func (n *Netplay) Write(msg *NetplayMsgType) {
@@ -530,4 +533,8 @@ func (n *Netplay) PumpSendQueue() {
 		n.Write(n.OoPacket.Msg)
 		n.OoPacket.Msg = nil
 	}
+}
+
+func (n *Netplay) OnLoopPoll() bool {
+	return true
 }
