@@ -77,7 +77,9 @@ func (i *InputQueue) DiscardConfirmedFrames(frame int64) {
 		frame = MIN(frame, i.LastFrameRequested)
 	}
 
-	logrus.Info(fmt.Sprintf("discarding confirmed frames up to %d (last_added:%d length:%d [head:%d tail:%d]).", frame, i.LastAddedFrame, i.Length, i.Head, i.Tail))
+	logrus.Info(fmt.Sprintf("discarding confirmed frames up to %d (last_added:%d length:%d [head:%d tail:%d]).",
+		frame, i.LastAddedFrame, i.Length, i.Head, i.Tail))
+
 	if frame >= i.LastAddedFrame {
 		i.Tail = i.Head
 	} else {
@@ -140,7 +142,7 @@ func (i *InputQueue) GetInput(requestedFrame int64, input *GameInput) bool {
 	 * path.  ASSERT this to verify that it's true.
 	 */
 	if i.FirstIncorrectFrame != NULL_FRAME {
-		logrus.Panic("No one should ever try to grab any input when we have a prediction error.  Doing so means that we're just going further down the wrong path.")
+		logrus.Panic("No one should ever try to grab any input when we have a prediction error.")
 	}
 
 	// Remember the last requested frame number for later.  We'll need this in AddInput() to drop out of prediction mode.
@@ -181,7 +183,8 @@ func (i *InputQueue) GetInput(requestedFrame int64, input *GameInput) bool {
 			logrus.Info("basing new prediction frame from nothing, since we have no frames yet.")
 			i.Prediction.Erase()
 		} else {
-			logrus.Info(fmt.Sprintf("basing new prediction frame from previously added frame (queue entry:%d, frame:%d).", PREVIOUS_FRAME(i.Head), i.Inputs[PREVIOUS_FRAME(i.Head)].Frame))
+			logrus.Info(fmt.Sprintf("basing new prediction frame from previously added frame (queue entry:%d, frame:%d).",
+				PREVIOUS_FRAME(i.Head), i.Inputs[PREVIOUS_FRAME(i.Head)].Frame))
 			i.Prediction = i.Inputs[PREVIOUS_FRAME(i.Head)]
 		}
 		i.Prediction.Frame++

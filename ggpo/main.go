@@ -9,8 +9,9 @@ import (
 func StartSession(session **ggponet.GGPOSession, cb ggponet.GGPOSessionCallbacks, game string, numPlayers int64, inputSize int64) ggponet.GGPOErrorCode {
 	var p2p backend.Peer2PeerBackend = backend.Peer2PeerBackend{NumPlayers: numPlayers, InputSize: inputSize}
 	p2p.Init(cb, game)
-	var s ggponet.GGPOSession = &p2p
-	*session = &s
+	//TODO: Fix error &p2p
+	//var s ggponet.GGPOSession = &p2p
+	//*session = &s
 	return ggponet.GGPO_OK
 }
 

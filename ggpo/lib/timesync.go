@@ -79,12 +79,12 @@ func (t *TimeSync) RecommendFrameWaitDuration(requireIdleInput bool) int64 {
 	if requireIdleInput {
 		for i := 1; i < len(t.LastInputs); i++ {
 			if !t.LastInputs[i].Equal(t.LastInputs[0], true) {
-				logrus.Info(fmt.Sprintf("iteration %d:  rejecting due to input stuff at position %d...!!!", t.Count, i))
+				logrus.Info(fmt.Sprintf("iteration %d: rejecting due to input stuff at position %d !", t.Count, i))
 				return int64(0)
 			}
 		}
 	}
 
-	// Success!!! Recommend the number of frames to sleep and adjust
+	// Success! Recommend the number of frames to sleep and adjust
 	return MIN(sleepFrames, MAX_FRAME_ADVANTAGE)
 }

@@ -136,7 +136,8 @@ func (s *SyncTestBackend) IncrementFrame() ggponet.GGPOErrorCode {
 			}
 			checksum := s.Sync.GetLastSavedFrame().Checksum
 			if info.Checksum != checksum {
-				logrus.Info(fmt.Sprintf("FrameCount : %d , LastSavedFrame.buf : %x , LastSavedFrame.cbuf : %d", s.Sync.FrameCount, s.Sync.GetLastSavedFrame().Buf, s.Sync.GetLastSavedFrame().Cbuf))
+				logrus.Info(fmt.Sprintf("FrameCount : %d , LastSavedFrame.buf : %x , LastSavedFrame.cbuf : %d",
+					s.Sync.FrameCount, s.Sync.GetLastSavedFrame().Buf, s.Sync.GetLastSavedFrame().Cbuf))
 				logrus.Info(fmt.Sprintf("Checksum for frame %d does not match saved (%d != %d)", frame, checksum, info.Checksum))
 			}
 			println()

@@ -109,7 +109,7 @@ func (s *Sync) GetConfirmedInputs(values []byte, size int64, frame int64) int64 
 
 	for i := 0; i < int(s.Config.NumPlayers); i++ {
 		var input GameInput
-		if s.LocalConnectStatus[i].Disconnected == 1 && frame > s.LocalConnectStatus[i].LastFrame {
+		if s.LocalConnectStatus[i].Disconnected && frame > s.LocalConnectStatus[i].LastFrame {
 			disconnectFlags |= (1 << i)
 			input.Erase()
 		} else {
@@ -135,7 +135,7 @@ func (s *Sync) SynchronizeInputs(values []byte, size int64) int64 {
 	output = make([]byte, size)
 	for i := 0; i < int(s.Config.NumPlayers); i++ {
 		var input GameInput
-		if s.LocalConnectStatus[i].Disconnected == 1 && s.FrameCount > s.LocalConnectStatus[i].LastFrame {
+		if s.LocalConnectStatus[i].Disconnected && s.FrameCount > s.LocalConnectStatus[i].LastFrame {
 			disconnectedFlags += 1 << i
 			input.Bits = nil
 		} else {
@@ -198,7 +198,8 @@ func (s *Sync) LoadFrame(frame int64) {
 	s.SavedState.Head = s.FindSavedFrameIndex(frame)
 	var state *SavedFrame = &s.SavedState.Frames[s.SavedState.Head]
 
-	logrus.Info(fmt.Sprintf("=== Loading frame info %d (size: %d  checksum: %08x).\n", state.Frame, state.Cbuf, state.Checksum))
+	logrus.Info(fmt.Sprintf("=== Loading frame info %d (size: %d  checksum: %08x).\n",
+		state.Frame, state.Cbuf, state.Checksum))
 
 	s.Callbacks.LoadGameState(state.Buf, state.Cbuf)
 
@@ -222,7 +223,9 @@ func (s *Sync) SaveCurrentFrame() {
 	state.Frame = s.FrameCount
 	s.Callbacks.SaveGameState(&state.Buf, &state.Cbuf, &state.Checksum, state.Frame)
 
-	logrus.Info(fmt.Sprintf("=== Saved frame info %d (size: %d  checksum: %08x).\n", state.Frame, state.Cbuf, state.Checksum))
+	logrus.Info(fmt.Sprintf("=== Saved frame info %d (size: %d  checksum: %08x).\n",
+		state.Frame, state.Cbuf, state.Checksum))
+
 	s.SavedState.Head = (s.SavedState.Head + 1) % int64(len(s.SavedState.Frames))
 }
 

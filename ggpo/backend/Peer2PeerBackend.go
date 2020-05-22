@@ -195,16 +195,19 @@ func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
 func (p *Peer2PeerBackend) Poll2Players(currentFrame int64) int64 {
 	totalMinConfirmed := int64(lib.MAX_INT)
 	for i := 0; i < int(p.NumPlayers); i++ {
-		queueConnected := p.Endpoints[i].PeerConnectStatus //TODO: à revoir
+		//queueConnected := p.Endpoints[i].PeerConnectStatus //TODO: à revoir
 
-		if p.LocalConnectStatus[i].Disconnected == 0 {
+		if !p.LocalConnectStatus[i].Disconnected {
 			totalMinConfirmed = lib.MIN(p.LocalConnectStatus[i].LastFrame, totalMinConfirmed)
 		}
-		logrus.Info(fmt.Sprintf("local endp: connected = %t, last_received = %d, totalMinConfirmed = %d.", p.LocalConnectStatus[i].Disconnected == 0, p.LocalConnectStatus[i].LastFrame, totalMinConfirmed))
-		if !queueConnected && p.LocalConnectStatus[i].Disconnected == 0 {
-			logrus.Info(fmt.Sprintf("disconnecting i %d by remote request.", i))
-			p.DisconnectPlayerQueue(int64(i), totalMinConfirmed)
-		}
+
+		logrus.Info(fmt.Sprintf("local endp: connected = %t, last_received = %d, totalMinConfirmed = %d.",
+			!p.LocalConnectStatus[i].Disconnected, p.LocalConnectStatus[i].LastFrame, totalMinConfirmed))
+
+		// if !queueConnected && !p.LocalConnectStatus[i].Disconnected {
+		// 	logrus.Info(fmt.Sprintf("disconnecting i %d by remote request.", i))
+		// 	p.DisconnectPlayerQueue(int64(i), totalMinConfirmed)
+		// }
 		logrus.Info(fmt.Sprintf("totalMinConfirmed = %d.\n", totalMinConfirmed))
 	}
 	return totalMinConfirmed
@@ -227,13 +230,16 @@ func (p *Peer2PeerBackend) PollNPlayers(currentFrame int64) int64 {
 
 			queueConnected = queueConnected && connected
 			queueMinConfirmed = int64(lib.MIN(lastReceived, queueMinConfirmed))
-			logrus.Info(fmt.Sprintf("endpoint %d: connected = %t, last_received = %d, queueMinConfirmed = %d.", i, connected, lastReceived, queueMinConfirmed))
+			logrus.Info(fmt.Sprintf("endpoint %d: connected = %t, last_received = %d, queueMinConfirmed = %d.",
+				i, connected, lastReceived, queueMinConfirmed))
 		}
 		// merge in our local status only if we're still connected!
-		if p.LocalConnectStatus[queue].Disconnected == 0 {
+		if !p.LocalConnectStatus[queue].Disconnected {
 			queueMinConfirmed = lib.MIN(p.LocalConnectStatus[queue].LastFrame, queueMinConfirmed)
 		}
-		logrus.Info(fmt.Sprintf("local endp: connected = %t, last_received = %d, queueMinConfirmed = %d.", p.LocalConnectStatus[queue].Disconnected == 0, p.LocalConnectStatus[queue].LastFrame, queueMinConfirmed))
+
+		logrus.Info(fmt.Sprintf("local endp: connected = %t, last_received = %d, queueMinConfirmed = %d.",
+			!p.LocalConnectStatus[queue].Disconnected, p.LocalConnectStatus[queue].LastFrame, queueMinConfirmed))
 
 		if queueConnected {
 			totalMinConfirmed = lib.MIN(queueMinConfirmed, totalMinConfirmed)
@@ -241,12 +247,12 @@ func (p *Peer2PeerBackend) PollNPlayers(currentFrame int64) int64 {
 			// check to see if this disconnect notification is further back than we've been before.  If
 			// so, we need to re-adjust.  This can happen when we detect our own disconnect at frame n
 			// and later receive a disconnect notification for frame n-1.
-			if p.LocalConnectStatus[queue].Disconnected == 0 || p.LocalConnectStatus[queue].LastFrame > queueMinConfirmed {
+			if !p.LocalConnectStatus[queue].Disconnected || p.LocalConnectStatus[queue].LastFrame > queueMinConfirmed {
 				logrus.Info(fmt.Sprintf("disconnecting queue %d by remote request.", queue))
 				p.DisconnectPlayerQueue(int64(queue), queueMinConfirmed)
 			}
 		}
-		logrus.Info(fmt.Sprintf("  totalMinConfirmed = %d.", totalMinConfirmed))
+		logrus.Info(fmt.Sprintf("totalMinConfirmed = %d.", totalMinConfirmed))
 	}
 	return totalMinConfirmed
 }
@@ -293,7 +299,7 @@ func (p *Peer2PeerBackend) DisconnectPlayer(player ggponet.GGPOPlayerHandle) ggp
 		return result
 	}
 
-	if p.LocalConnectStatus[queue].Disconnected == 1 {
+	if p.LocalConnectStatus[queue].Disconnected {
 		return ggponet.GGPO_ERRORCODE_PLAYER_DISCONNECTED
 	}
 
@@ -313,7 +319,7 @@ func (p *Peer2PeerBackend) DisconnectPlayerQueue(queue int64, syncto int64) {
 
 	p.Endpoints[queue].Disconnect()
 
-	p.LocalConnectStatus[queue].Disconnected = 1
+	p.LocalConnectStatus[queue].Disconnected = true
 	p.LocalConnectStatus[queue].LastFrame = syncto
 
 	if syncto < framecount {

@@ -67,6 +67,14 @@ func (g *GameInput) Equal(other GameInput, bitsonly bool) bool {
 	return (bitsonly || g.Frame == other.Frame) && g.Size == other.Size && bytes.Compare(g.Bits, other.Bits) == 0
 }
 
+func (g *GameInput) Set(i int64) {
+	g.Bits[i/8] |= (1 << (i % 8))
+}
+
+func (g *GameInput) Clear(i int64) {
+	g.Bits[i/8] &= ^(1 << (i % 8))
+}
+
 func (g *GameInput) Erase() {
 	g.Bits = make([]byte, len(g.Bits))
 }

@@ -157,6 +157,6 @@ type GGPONetworkStats struct {
 }
 
 type ConnectStatus struct {
-	Disconnected uint64
+	Disconnected bool
 	LastFrame    int64
 }
