@@ -77,23 +77,25 @@ func (p *Poll) RegisterHandle(sink *IPollSink, h HANDLE, cookie []byte) {
 	p.HandleCount++
 }
 
-//TODO: Here, cf commented lines those functions
 func (p *Poll) RegisterMsgLoop(sink *IPollSink, cookie []byte) {
 	var pollSink PollSinkCb
 	pollSink.Init(sink, cookie)
-	//p.MsgSinks.PushBack(pollSink)
+	var u U = &pollSink
+	p.MsgSinks.PushBack(&u)
 }
 
 func (p *Poll) RegisterLoop(sink *IPollSink, cookie []byte) {
 	var pollSink PollSinkCb
 	pollSink.Init(sink, cookie)
-	//p.MsgSinks.PushBack(pollSink)
+	var u U = &pollSink
+	p.MsgSinks.PushBack(&u)
 }
 
 func (p *Poll) RegisterPeriodic(sink *IPollSink, interval int64, cookie []byte) {
 	var pollPeriodicSink PollPeriodicSinkCb
 	pollPeriodicSink.Init(sink, cookie, interval)
-	//p.MsgSinks.PushBack(pollPeriodicSink)
+	var u U = &pollPeriodicSink
+	p.MsgSinks.PushBack(&u)
 }
 
 func (p *Poll) Run() {
