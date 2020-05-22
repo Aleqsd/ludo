@@ -5,9 +5,8 @@ import (
 
 	"github.com/libretro/ludo/ggpo/platform"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/windows"
 )
-
-type HANDLE int
 
 const (
 	MAX_POLLABLE_HANDLES = 64
@@ -16,7 +15,7 @@ const (
 type Poll struct {
 	StartTime   uint64
 	HandleCount int64
-	Handles     [MAX_POLLABLE_HANDLES]HANDLE
+	Handles     []windows.Handle
 	HandleSinks [MAX_POLLABLE_HANDLES]PollSinkCb
 
 	MsgSinks      StaticBuffer
@@ -25,10 +24,10 @@ type Poll struct {
 }
 
 type IPollSink interface {
-	OnHandlePoll(cookie []byte)
-	OnMsgPoll(cookie []byte)
-	OnPeriodicPoll(cookie []byte, lastFired int64)
-	OnLoopPoll(cookie []byte)
+	OnHandlePoll(cookie []byte) bool
+	OnMsgPoll(cookie []byte) bool
+	OnPeriodicPoll(cookie []byte, lastFired int64) bool
+	OnLoopPoll(cookie []byte) bool
 }
 
 type PollSinkCb struct {
@@ -54,18 +53,23 @@ func (p *PollPeriodicSinkCb) Init(s *IPollSink, c []byte, i int64) {
 }
 
 func (p *Poll) Init() {
+	var err error
 	p.HandleCount = 0
 	p.StartTime = 0
 
 	p.MsgSinks.Init(16)
 	p.LoopSinks.Init(16)
 	p.PeriodicSinks.Init(16)
-	//p.Handles[p.HandleCount++] = CreateEvent(NULL, true, false, NULL)
+	p.Handles = make([]windows.Handle, MAX_POLLABLE_HANDLES)
+	p.Handles[p.HandleCount], err = windows.CreateEvent(nil, 1, 0, nil)
+	p.HandleCount++
+	if err != nil {
+		logrus.Panic("Assert error on CreateEvent")
+	}
 
 }
 
-func (p *Poll) RegisterHandle(sink *IPollSink, h HANDLE, cookie []byte) {
-
+func (p *Poll) RegisterHandle(sink *IPollSink, h windows.Handle, cookie []byte) {
 	if p.HandleCount >= MAX_POLLABLE_HANDLES-1 {
 		logrus.Panic("Assert error on HandleCount too high")
 	}
@@ -117,34 +121,38 @@ func (p *Poll) Pump(timeout int64) bool {
 		timeout = MIN(int64(timeout), int64(maxWait))
 	}
 
-	//TODO: WaitForMultipleObjects ?
-	//var res int64
-	// res = WaitForMultipleObjects(_handle_count, _handles, false, timeout);
-	// if (res >= WAIT_OBJECT_0 && res < WAIT_OBJECT_0 + _handle_count) {
-	//    i = res - WAIT_OBJECT_0;
-	//    finished = !_handle_sinks[i].sink->OnHandlePoll(_handle_sinks[i].cookie) || finished;
-	// }
+	res, err := windows.WaitForMultipleObjects(p.Handles, false, uint32(timeout))
+	if err != nil {
+		logrus.Panic("Assert error on WaitForMultipleObjects")
+	}
+	if res >= windows.WAIT_OBJECT_0 && int64(res) < int64(windows.WAIT_OBJECT_0)+p.HandleCount {
+		j := res - windows.WAIT_OBJECT_0
+		var s IPollSink = *p.HandleSinks[j].Sink
+		finished = !s.OnHandlePoll(p.HandleSinks[j].Cookie) || finished
+	}
 
-	//TODO: Here, cf commented lines here
 	var i int64
 	for i = 0; i < p.MsgSinks.Size; i++ {
-		//var cb PollSinkCb = p.MsgSinks.Get(i).(PollSinkCb)
-		//finished = !cb.Sink.OnMsgPoll(cb.Cookie) || finished
+		var cb PollSinkCb = p.MsgSinks.Get(i).(PollSinkCb)
+		var s IPollSink = *cb.Sink
+		finished = !s.OnMsgPoll(cb.Cookie) || finished
 	}
 
 	for i = 0; i < p.PeriodicSinks.Size; i++ {
 		var cb PollPeriodicSinkCb
 		cb.PollSinkCbVal = p.PeriodicSinks.Get(i).(PollSinkCb)
 		if cb.Interval+cb.LastFired <= int64(elapsed) {
-			//cb.LastFired = (elapsed / cb.Interval) * cb.Interval
-			//finished = !cb.Sink.OnPeriodicPoll(cb.PollSinkCbVal.Cookie, cb.LastFired) || finished
+			cb.LastFired = (int64(elapsed) / cb.Interval) * cb.Interval
+			var s IPollSink = *cb.PollSinkCbVal.Sink
+			finished = !s.OnPeriodicPoll(cb.PollSinkCbVal.Cookie, cb.LastFired) || finished
 		}
 
 	}
 
 	for i = 0; i < p.LoopSinks.Size; i++ {
-		//var cb PollSinkCb = p.LoopSinks.Get(i).(PollSinkCb)
-		//finished = !cb.Sink.OnLoopPoll(cb.Cookie) || finished
+		var cb PollSinkCb = p.LoopSinks.Get(i).(PollSinkCb)
+		var s IPollSink = *cb.Sink
+		finished = !s.OnLoopPoll(cb.Cookie) || finished
 	}
 
 	return finished
