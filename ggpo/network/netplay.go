@@ -2,7 +2,6 @@ package network
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/gob"
 	"fmt"
 	"math/rand"
@@ -15,11 +14,6 @@ import (
 	"github.com/libretro/ludo/ggpo/platform"
 	"github.com/sirupsen/logrus"
 )
-
-type Event struct {
-	Input     lib.GameInput
-	PlayerNum int64
-}
 
 type OoPacket struct {
 	SendTime uint64
@@ -50,43 +44,50 @@ const (
 )
 
 type Netplay struct {
-	Callbacks            ggponet.GGPOSessionCallbacks
-	Conn                 *net.UDPConn
-	LocalAddr            *net.UDPAddr
-	RemoteAddr           *net.UDPAddr
-	Queue                int64
-	IsHosting            bool
-	LastReceivedInput    lib.GameInput
-	LastAckedInput       lib.GameInput
-	LastSentInput        lib.GameInput
-	DisconnectEventSent  int64
-	LocalConnectStatus   []ggponet.ConnectStatus
-	LocalFrameAdvantage  int64
-	RemoteFrameAdvantage int64
-	RoundTripTime        int64
-	KbpsSent             int64
-	PeerConnectStatus    []ggponet.ConnectStatus
-	TimeSync             lib.TimeSync
-	CurrentState         State
-	PendingOutput        lib.RingBuffer
-	PacketsSent          int64
-	BytesSent            int64
-	LastSendTime         uint64
-	MagicNumber          uint64
-	RemoteMagicNumber    uint64
-	Connected            bool
-	NextSendSeq          uint64
-	SendQueue            lib.RingBuffer
-	SendLatency          int64
-	OopPercent           int64
-	OoPacket             OoPacket
-	NetplayState         StateType
+	Callbacks             ggponet.GGPOSessionCallbacks
+	Conn                  *net.UDPConn
+	LocalAddr             *net.UDPAddr
+	RemoteAddr            *net.UDPAddr
+	Queue                 int64
+	IsHosting             bool
+	LastReceivedInput     lib.GameInput
+	LastAckedInput        lib.GameInput
+	LastSentInput         lib.GameInput
+	LocalConnectStatus    []ggponet.ConnectStatus
+	LocalFrameAdvantage   int64
+	RemoteFrameAdvantage  int64
+	RoundTripTime         int64
+	PeerConnectStatus     []ggponet.ConnectStatus
+	TimeSync              lib.TimeSync
+	CurrentState          State
+	PendingOutput         lib.RingBuffer
+	LastSendTime          uint64
+	MagicNumber           uint64
+	RemoteMagicNumber     uint64
+	Connected             bool
+	NextSendSeq           uint64
+	SendQueue             lib.RingBuffer
+	EventQueue            lib.RingBuffer
+	SendLatency           int64
+	OopPercent            int64
+	OoPacket              OoPacket
+	NetplayState          StateType
+	ReceiveChannel        chan NetplayMsgType
+	ReceiveCount          uint64
+	DisconnectNotifyStart int64
+	DisconnectNotifySent  bool
+	NextRecvSeq           uint64
+	DisconnectTimeout     int64
+	DisconnectEventSent   bool
+	LastRecvTime          uint64
+	ShutDownTimeout       int64
+	StatsStartTime        uint64
+	KbpsSent              int64
+	BytesSent             int64
+	PacketsSent           int64
 }
 
 func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []ggponet.ConnectStatus, poll *lib.Poll) {
-	//n.Callbacks = callbacks
-	//n.Poll = poll
-	//n.Poll.RegisterLoop(n)
 	n.LocalAddr, _ = net.ResolveUDPAddr("udp4", "127.0.0.1:8089")
 	n.RemoteAddr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", remotePlayer.IPAddress, int(remotePlayer.Port)))
 	n.Queue = queue
@@ -101,7 +102,19 @@ func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []gg
 	n.LastSendTime = 0
 	n.NextSendSeq = 0
 	n.MagicNumber = 0
+	n.DisconnectNotifyStart = 0
+	n.DisconnectNotifySent = false
+	n.NextRecvSeq = 0
+	n.DisconnectTimeout = 0
+	n.DisconnectEventSent = false
+	n.LastRecvTime = 0
+	n.ShutDownTimeout = 0
+	n.StatsStartTime = 0
+	n.KbpsSent = 0
+	n.BytesSent = 0
+	n.PacketsSent = 0
 	n.SendQueue.Init(64)
+	n.EventQueue.Init(64)
 	for n.MagicNumber == 0 {
 		n.MagicNumber = rand.Uint64()
 	}
@@ -112,6 +125,9 @@ func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []gg
 
 	var i lib.IPollSink = n
 	poll.RegisterLoop(&i)
+
+	n.ReceiveChannel = make(chan NetplayMsgType, 60)
+	n.ReceiveCount = 0
 
 	logrus.Info(fmt.Sprintf("binding udp socket to port %d.", n.LocalAddr.Port))
 }
@@ -146,7 +162,8 @@ func (n *Netplay) Read() {
 		buffer := bytes.NewBuffer(netinput[:length])
 		decoder := gob.NewDecoder(buffer)
 		decoder.Decode(msg)
-		//TODO: Créer un channel pour stocker les inputs qui arrivent : channel <- msg
+		n.ReceiveChannel <- *msg
+		n.ReceiveCount++
 	}
 }
 
@@ -227,50 +244,6 @@ func (n *Netplay) SendMsg(msg *NetplayMsgType) {
 	n.PumpSendQueue()
 }
 
-func (n *Netplay) ReceiveInput() Event {
-	//TODO: get channel value
-	//Convert it to event via ByteToEvent() function
-	//Return the event
-	return Event{}
-}
-
-func (n *Netplay) InputToByte(input lib.GameInput) []byte {
-	frameByte := make([]byte, 8)
-	binary.LittleEndian.PutUint64(frameByte, uint64(input.Frame))
-	inputByte := make([]byte, len(input.Bits)+len(frameByte))
-	count := 0
-	for i := 0; i < len(frameByte); i++ {
-		inputByte[count] = frameByte[i]
-		count++
-	}
-	for i := 0; i < len(input.Bits); i++ {
-		inputByte[count] = input.Bits[i]
-		count++
-	}
-	return inputByte
-}
-
-func (n *Netplay) ByteToInput(inputByte []byte) lib.GameInput {
-	input := lib.GameInput{}
-	count := 0
-	frameByte := make([]byte, 8)
-	for i := 0; i < len(frameByte); i++ {
-		frameByte[i] = inputByte[count]
-		count++
-	}
-	bits := make([]byte, len(inputByte)-len(frameByte))
-	for i := 0; i < len(bits); i++ {
-		bits[i] = inputByte[count]
-		count++
-	}
-
-	frame := int64(binary.LittleEndian.Uint64(frameByte))
-	input.Frame = frame
-	input.Bits = bits
-
-	return input
-}
-
 func (n *Netplay) HostConnection() {
 	n.IsHosting = true
 	var err error
@@ -297,6 +270,7 @@ func (n *Netplay) JoinConnection() {
 
 func (n *Netplay) Disconnect() ggponet.GGPOErrorCode {
 	n.CurrentState = Disconnected
+	n.ShutDownTimeout = int64(platform.GetCurrentTimeMS()) + UDP_SHUTDOWN_TIMER
 	n.Conn.Close()
 	if n.Conn == nil {
 		return ggponet.GGPO_OK
@@ -309,11 +283,7 @@ func (n *Netplay) GetPeerConnectStatus(id int64, frame *int64) bool {
 	return true
 }
 
-func (n *Netplay) OnInvalid(msg *MsgType, len int64) bool {
-	return false
-}
-
-func (n *Netplay) OnSyncRequest(msg *NetplayMsgType, len int64) bool {
+func (n *Netplay) OnSyncRequest(msg *NetplayMsgType) bool {
 	if n.RemoteMagicNumber != 0 && msg.Hdr.Magic != n.RemoteMagicNumber {
 		logrus.Info(fmt.Sprintf("Ignoring sync request from unknown endpoint (%d != %d).", msg.Hdr.Magic, n.RemoteMagicNumber))
 		return false
@@ -324,13 +294,13 @@ func (n *Netplay) OnSyncRequest(msg *NetplayMsgType, len int64) bool {
 	return true
 }
 
-func (n *Netplay) OnSyncReply(msg *NetplayMsgType, len int64) bool {
+func (n *Netplay) OnSyncReply(msg *NetplayMsgType) bool {
 	if n.CurrentState != Syncing {
 		logrus.Info("Ignoring SyncReply while not synching.")
 		return msg.Hdr.Magic == n.RemoteMagicNumber
 	}
 
-	if msg.SyncReply.RandomReply != int64(n.NetplayState.Sync.Random) {
+	if msg.SyncReply.RandomReply != n.NetplayState.Sync.Random {
 		logrus.Info(fmt.Sprintf("sync reply %d != %d.  Keep looking...", msg.SyncReply.RandomReply, n.NetplayState.Sync.Random))
 		return false
 	}
@@ -359,14 +329,14 @@ func (n *Netplay) OnSyncReply(msg *NetplayMsgType, len int64) bool {
 	return true
 }
 
-func (n *Netplay) OnInput(msg *NetplayMsgType, len int64) bool {
+func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 	// If a disconnect is requested, go ahead and disconnect now.
 	disconnectRequested := msg.Input.DisconnectRequested
 	if disconnectRequested {
-		if n.CurrentState != Disconnected && n.DisconnectEventSent == 0 {
+		if n.CurrentState != Disconnected && !n.DisconnectEventSent {
 			logrus.Info("Disconnecting endpoint on remote request.")
 			//QueueEvent(Event(Event.Disconnected))
-			n.DisconnectEventSent = 1
+			n.DisconnectEventSent = true
 		}
 	} else {
 		// Update the peer connection status if this peer is still considered to be part of the network.
@@ -457,7 +427,7 @@ func (n *Netplay) OnInput(msg *NetplayMsgType, len int64) bool {
 	return true
 }
 
-func (n *Netplay) OnInputAck(msg *NetplayMsgType, len int64) bool {
+func (n *Netplay) OnInputAck(msg *NetplayMsgType) bool {
 	// Get rid of our buffered input
 	for n.PendingOutput.Size > 0 && (n.PendingOutput.Front()).(lib.GameInput).Frame < msg.InputAck.AckFrame {
 		logrus.Info(fmt.Sprintf("Throwing away pending output frame %d\n", n.PendingOutput.Front().(lib.GameInput).Frame))
@@ -467,7 +437,7 @@ func (n *Netplay) OnInputAck(msg *NetplayMsgType, len int64) bool {
 	return true
 }
 
-func (n *Netplay) OnQualityReport(msg *NetplayMsgType, len int64) bool {
+func (n *Netplay) OnQualityReport(msg *NetplayMsgType) bool {
 	// send a reply so the other side can compute the round trip transmit time.
 	//    UdpMsg *reply = new UdpMsg(UdpMsg::QualityReply);
 	//    reply->u.quality_reply.pong = msg->u.quality_report.ping;
@@ -477,12 +447,12 @@ func (n *Netplay) OnQualityReport(msg *NetplayMsgType, len int64) bool {
 	return true
 }
 
-func (n *Netplay) OnQualityReply(msg *NetplayMsgType, len int64) bool {
+func (n *Netplay) OnQualityReply(msg *NetplayMsgType) bool {
 	n.RoundTripTime = int64(platform.GetCurrentTimeMS()) - msg.QualityReply.Pong
 	return true
 }
 
-func (n *Netplay) OnKeepAlive(msg *NetplayMsgType, len int64) bool {
+func (n *Netplay) OnKeepAlive(msg *NetplayMsgType) bool {
 	return true
 }
 
@@ -534,6 +504,198 @@ func (n *Netplay) PumpSendQueue() {
 	}
 }
 
+func (n *Netplay) SetDisconnectNotifyStart(timeout int64) {
+	n.DisconnectNotifyStart = timeout
+}
+
+func (n *Netplay) SetDisconnectTimeout(timeout int64) {
+	n.DisconnectTimeout = timeout
+}
+
+func (n *Netplay) GetEvent(e *Event) bool {
+	if n.EventQueue.Size == 0 {
+		return false
+	}
+	e = n.EventQueue.Front().(*Event)
+	n.EventQueue.Pop()
+	return true
+}
+
+func (n *Netplay) QueueEvent(e *Event) {
+	//LogEvent("Queuing event", evt)
+	var t lib.T = &e
+	n.EventQueue.Push(&t)
+}
+
+func (n *Netplay) SendSyncRequest() {
+	n.NetplayState.Sync.Random = rand.Uint64() & 0xFFFF
+	var msg *NetplayMsgType
+	msg.Init(SyncRequest)
+	msg.SyncRequest.RandomRequest = n.NetplayState.Sync.Random
+	n.SendMsg(msg)
+}
+
+func (n *Netplay) UpdateNetworkStats() {
+	now := platform.GetCurrentTimeMS()
+
+	if n.StatsStartTime == 0 {
+		n.StatsStartTime = now;
+	}
+
+	totalBytesSent := n.BytesSent + (UDP_HEADER_SIZE * n.PacketsSent)
+	seconds := float64((now - n.StatsStartTime) / 1000.0)
+	Bps := float64(totalBytesSent) / seconds
+	udpOverhead := float64(100.0 * (UDP_HEADER_SIZE * n.PacketsSent) / n.BytesSent)
+
+	n.KbpsSent = int64(Bps / 1024)
+
+	logrus.Info(fmt.Sprintf("Network Stats -- Bandwidth: %.2f KBps   Packets Sent: %5d (%.2f pps)\nKB Sent: %.2f    UDP Overhead: %.2f %%.\n", n.KbpsSent, n.PacketsSent, float64(n.PacketsSent * 1000 / int64(now - n.StatsStartTime)), totalBytesSent / 1024.0, udpOverhead))
+}
+
+func (n *Netplay) OnMsg(msg *NetplayMsgType) {
+	handled := false
+
+	// filter out messages that don't match what we expect
+	seq := msg.Hdr.SequenceNumber
+	if msg.Hdr.Type != SyncRequest && msg.Hdr.Type != SyncReply {
+		if msg.Hdr.Magic != n.RemoteMagicNumber {
+			//LogMsg("recv rejecting", msg)
+			return
+		}
+
+		// filter out out-of-order packets
+		skipped := uint64(seq - n.NextRecvSeq)
+		logrus.Info(fmt.Sprintf("checking sequence number -> next - seq : %d - %d = %d\n", seq, n.NextRecvSeq, skipped))
+		if skipped > MAX_SEQ_DISTANCE {
+			logrus.Info(fmt.Sprintf("dropping out of order packet (seq: %d, last seq:%d)\n", seq, n.NextRecvSeq))
+			return
+		}
+	}
+
+	n.NextRecvSeq = seq
+	//LogMsg("recv", msg);
+
+	switch msg.Hdr.Type {
+	case SyncRequest:
+		handled = n.OnSyncRequest(msg)
+		break
+	case SyncReply:
+		handled = n.OnSyncReply(msg)
+		break
+	case Input:
+		handled = n.OnInput(msg)
+		break
+	case QualityReport:
+		handled = n.OnQualityReport(msg)
+		break
+	case QualityReply:
+		handled = n.OnQualityReply(msg)
+		break
+	case KeepAlive:
+		handled = n.OnKeepAlive(msg)
+		break
+	case InputAck:
+		handled = n.OnInputAck(msg)
+		break
+	default:
+		handled = false
+	}
+
+	if handled {
+		n.LastRecvTime = platform.GetCurrentTimeMS()
+		if n.DisconnectNotifySent && n.CurrentState == Running {
+			var evt Event
+			evt.Init(EventNetworkResumed)
+			n.QueueEvent(&evt)
+			n.DisconnectNotifySent = false
+		}
+	}
+}
+
 func (n *Netplay) OnLoopPoll() bool {
+	messages := make([]NetplayMsgType, n.ReceiveCount)
+	for i := 0; i < int(n.ReceiveCount); i++ {
+		messages[i] = <-n.ReceiveChannel
+	}
+	n.ReceiveCount = 0
+
+	for i := 0; i < len(messages); i++ {
+		n.OnMsg(&messages[i])
+	}
+
+	var now uint64 = platform.GetCurrentTimeMS()
+	var nextInterval uint64
+
+	n.PumpSendQueue()
+	switch n.CurrentState {
+	case Syncing:
+		if n.NetplayState.Sync.RoundTripsRemaining == NUM_SYNC_PACKETS {
+			nextInterval = SYNC_FIRST_RETRY_INTERVAL
+		} else {
+			nextInterval = SYNC_RETRY_INTERVAL
+		}
+		if n.LastSendTime > 0 && n.LastSendTime+nextInterval < now {
+			logrus.Info(fmt.Sprintf("No luck syncing after %d ms... Re-queueing sync packet.\n", nextInterval))
+			n.SendSyncRequest()
+		}
+		break
+
+	case Running:
+		// xxx: rig all this up with a timer wrapper
+		if n.NetplayState.Running.LastInputPacketRecvTime <= 0 || n.NetplayState.Running.LastInputPacketRecvTime+RUNNING_RETRY_INTERVAL < now {
+			logrus.Info(fmt.Sprintf("Haven't exchanged packets in a while (last received:%d  last sent:%d).  Resending.\n", n.LastReceivedInput.Frame, n.LastSentInput.Frame))
+			n.SendPendingOutput()
+			n.NetplayState.Running.LastInputPacketRecvTime = now
+		}
+
+		if n.NetplayState.Running.LastQualityReportTime <= 0 || n.NetplayState.Running.LastQualityReportTime+QUALITY_REPORT_INTERVAL < now {
+			var msg *NetplayMsgType
+			msg.Init(QualityReport)
+			msg.QualityReport.Ping = int64(platform.GetCurrentTimeMS())
+			msg.QualityReport.FrameAdvantage = n.LocalFrameAdvantage
+			n.SendMsg(msg)
+			n.NetplayState.Running.LastQualityReportTime = now
+		}
+
+		if n.NetplayState.Running.LastNetworkStatsInterval <= 0 || n.NetplayState.Running.LastNetworkStatsInterval+NETWORK_STATS_INTERVAL < now {
+			n.UpdateNetworkStats()
+			n.NetplayState.Running.LastNetworkStatsInterval = now
+		}
+
+		if n.LastSendTime > 0 && n.LastSendTime+KEEP_ALIVE_INTERVAL < now {
+			logrus.Info("Sending keep alive packet\n")
+			var msg *NetplayMsgType
+			msg.Init(KeepAlive)
+			n.SendMsg(msg)
+		}
+
+		if n.DisconnectTimeout > 0 && n.DisconnectNotifyStart > 0 && !n.DisconnectNotifySent && (n.LastRecvTime+uint64(n.DisconnectNotifyStart) < now) {
+			logrus.Info(fmt.Sprintf("Endpoint has stopped receiving packets for %d ms.  Sending notification.\n", n.DisconnectNotifyStart))
+			var evt Event
+			evt.Init(EventNetworkInterrupted)
+			evt.DisconnectTimeout = n.DisconnectTimeout - n.DisconnectNotifyStart
+			n.QueueEvent(&evt)
+			n.DisconnectNotifySent = true
+		}
+
+		if n.DisconnectTimeout > 0 && (n.LastRecvTime+uint64(n.DisconnectTimeout) < now) {
+			if !n.DisconnectEventSent {
+				logrus.Info(fmt.Sprintf("Endpoint has stopped receiving packets for %d ms.  Disconnecting.\n", n.DisconnectTimeout))
+				var evt Event
+				evt.Init(EventDisconnected)
+				n.QueueEvent(&evt)
+				n.DisconnectEventSent = true
+			}
+		}
+		break
+
+	case Disconnected:
+		if n.ShutDownTimeout < int64(now) {
+			logrus.Info("Shutting down udp connection.\n")
+			n.ShutDownTimeout = 0
+		}
+
+	}
+
 	return true
 }

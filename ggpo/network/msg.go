@@ -31,12 +31,12 @@ type HdrType struct {
 }
 
 type SyncRequestType struct {
-	RandomRequest   int64 /* please reply back with this random data */
+	RandomRequest   uint64 /* please reply back with this random data */
 	RemoteMagic     int64
 	RemoteEndpoints int64
 }
 type SyncReplyType struct {
-	RandomReply int64 /* OK, here's your random data back */
+	RandomReply uint64 /* OK, here's your random data back */
 }
 
 type QualityReportType struct {

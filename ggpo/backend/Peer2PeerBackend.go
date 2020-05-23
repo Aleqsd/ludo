@@ -345,8 +345,7 @@ func (p *Peer2PeerBackend) GetNetworkStats(stats *ggponet.GGPONetworkStats, play
 		return result
 	}
 
-	//stats = make([]byte, unsafe.Sizeof(*stats))
-	//p.Endpoints[queue].GetNetworkStats(stats) //TODO
+	p.Endpoints[queue].GetNetworkStats(stats)
 
 	return ggponet.GGPO_OK
 }
