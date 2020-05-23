@@ -262,12 +262,12 @@ func (p *Peer2PeerBackend) PollNPlayers(currentFrame int64) int64 {
 func (p *Peer2PeerBackend) PollNetplayEvents() {
 	var evt *network.Event
 	evt.Init(network.EventUnknown)
-	for i := 0; i < int(n.NumPlayers); i++ {
+	for i := 0; i < int(p.NumPlayers); i++ {
 		for p.Endpoints[i].GetEvent(evt) {
 			p.OnNetplayPeerEvent(evt, int64(i))
 		}
 	}
-	for i := 0; i < int(n.NumSpectators); i++ {
+	for i := 0; i < int(p.NumSpectators); i++ {
 		for p.Spectators[i].GetEvent(evt) {
 			p.OnNetplaySpectatorEvent(evt, int64(i))
 		}
@@ -281,7 +281,9 @@ func (p *Peer2PeerBackend) OnNetplayPeerEvent(evt *network.Event, queue int64) {
 		if !p.LocalConnectStatus[queue].Disconnected {
 			currentRemoteFrame := p.LocalConnectStatus[queue].LastFrame
 			newRemoteFrame := evt.Input.Frame
-			//ASSERT(current_remote_frame == -1 || new_remote_frame == (current_remote_frame + 1));
+			if currentRemoteFrame != -1 && newRemoteFrame != (currentRemoteFrame + 1) {
+				logrus.Panic("Assert error on remote frame in netplay peer event")
+			}
 
 			p.Sync.AddRemoteInput(queue, &evt.Input)
 			// Notify the other endpoints which frame we received from a peer
@@ -371,7 +373,7 @@ func (p *Peer2PeerBackend) IncrementFrame() ggponet.GGPOErrorCode {
 }
 
 func (p *Peer2PeerBackend) PollSyncEvents() {
-	var e lib.Event
+	var e *lib.Event
 	for p.Sync.GetEvent(e) {
 		p.OnSyncEvent(e)
 	}

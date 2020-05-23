@@ -344,9 +344,9 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 		for i := 0; i < int(unsafe.Sizeof(n.PeerConnectStatus)); i++ {
 			if remoteStatus[i].LastFrame < n.PeerConnectStatus[i].LastFrame {
 				logrus.Panic("Assert error remotestatus Lastframe")
-				n.PeerConnectStatus[i].Disconnected = n.PeerConnectStatus[i].Disconnected || remoteStatus[i].Disconnected
-				n.PeerConnectStatus[i].LastFrame = lib.MAX(n.PeerConnectStatus[i].LastFrame, remoteStatus[i].LastFrame)
 			}
+			n.PeerConnectStatus[i].Disconnected = n.PeerConnectStatus[i].Disconnected || remoteStatus[i].Disconnected
+			n.PeerConnectStatus[i].LastFrame = lib.MAX(n.PeerConnectStatus[i].LastFrame, remoteStatus[i].LastFrame)
 		}
 	}
 
