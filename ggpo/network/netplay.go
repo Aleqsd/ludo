@@ -612,6 +612,10 @@ func (n *Netplay) OnMsg(msg *NetplayMsgType) {
 	}
 }
 
+func (n *Netplay) IsSynchronized() bool {
+	return n.CurrentState == Running
+}
+
 func (n *Netplay) OnLoopPoll() bool {
 	messages := make([]NetplayMsgType, n.ReceiveCount)
 	for i := 0; i < int(n.ReceiveCount); i++ {

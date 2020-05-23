@@ -17,7 +17,7 @@ const (
 
 type Peer2PeerBackend struct {
 	Poll                  lib.Poll
-	Spectators            [ggponet.GGPO_MAX_SPECTATORS]network.Netplay
+	Spectators            []network.Netplay
 	LocalConnectStatus    []ggponet.ConnectStatus
 	Endpoints             []network.Netplay
 	Players               []ggponet.GGPOPlayer
@@ -46,6 +46,7 @@ func (p *Peer2PeerBackend) Init(cb ggponet.GGPOSessionCallbacks, gamename string
 
 	p.Players = make([]ggponet.GGPOPlayer, p.NumPlayers)
 	p.Endpoints = make([]network.Netplay, p.NumPlayers)
+	p.Spectators = make([]network.Netplay, p.NumSpectators)
 	p.LocalConnectStatus = make([]ggponet.ConnectStatus, p.NumPlayers)
 	p.Sync.Init(config, p.LocalConnectStatus)
 	for i := 0; i < len(p.LocalConnectStatus); i++ {
@@ -259,7 +260,85 @@ func (p *Peer2PeerBackend) PollNPlayers(currentFrame int64) int64 {
 }
 
 func (p *Peer2PeerBackend) PollNetplayEvents() {
-	//TODO
+	var evt *network.Event
+	evt.Init(network.EventUnknown)
+	for i := 0; i < int(n.NumPlayers); i++ {
+		for p.Endpoints[i].GetEvent(evt) {
+			p.OnNetplayPeerEvent(evt, int64(i))
+		}
+	}
+	for i := 0; i < int(n.NumSpectators); i++ {
+		for p.Spectators[i].GetEvent(evt) {
+			p.OnNetplaySpectatorEvent(evt, int64(i))
+		}
+	}
+}
+
+func (p *Peer2PeerBackend) OnNetplayPeerEvent(evt *network.Event, queue int64) {
+	p.OnNetplayEvent(evt, p.QueueToPlayerHandle(queue));
+	switch evt.Type {
+	case network.EventInput:
+		if !p.LocalConnectStatus[queue].Disconnected {
+			currentRemoteFrame := p.LocalConnectStatus[queue].LastFrame
+			newRemoteFrame := evt.Input.Frame
+			//ASSERT(current_remote_frame == -1 || new_remote_frame == (current_remote_frame + 1));
+
+			p.Sync.AddRemoteInput(queue, &evt.Input)
+			// Notify the other endpoints which frame we received from a peer
+			logrus.Info(fmt.Sprintf("setting remote connect status for queue %d to %d\n", queue, evt.Input.Frame))
+			p.LocalConnectStatus[queue].LastFrame = evt.Input.Frame
+		}
+		break
+
+	case network.EventDisconnected:
+		p.DisconnectPlayer(p.QueueToPlayerHandle(queue))
+		break
+	}
+}
+
+func (p *Peer2PeerBackend) OnNetplaySpectatorEvent(evt *network.Event, queue int64) {
+	//TODO: Spectators
+}
+
+func (p *Peer2PeerBackend) OnNetplayEvent(evt *network.Event, handle ggponet.GGPOPlayerHandle) {
+	var info ggponet.GGPOEvent
+
+	switch evt.Type {
+	case network.EventConnected:
+		info.Code = ggponet.GGPO_EVENTCODE_CONNECTED_TO_PEER
+		info.Connected.Player = handle
+		p.Callbacks.OnEvent(&info)
+		break
+
+	case network.EventSynchronizing:
+		info.Code = ggponet.GGPO_EVENTCODE_SYNCHRONIZING_WITH_PEER
+		info.Synchronizing.Player = handle
+		info.Synchronizing.Count = evt.Synchronizing.Count
+		info.Synchronizing.Total = evt.Synchronizing.Total
+		p.Callbacks.OnEvent(&info)
+		break
+
+	case network.EventSynchronized:
+		info.Code = ggponet.GGPO_EVENTCODE_SYNCHRONIZED_WITH_PEER
+		info.Synchronized.Player = handle
+		p.Callbacks.OnEvent(&info)
+
+		p.CheckInitialSync()
+		break
+
+	case network.EventNetworkInterrupted:
+		info.Code = ggponet.GGPO_EVENTCODE_CONNECTION_INTERRUPTED
+		info.ConnectionInterrupted.Player = handle
+		info.ConnectionInterrupted.DisconnectTimeout = evt.DisconnectTimeout
+		p.Callbacks.OnEvent(&info)
+		break
+
+	case network.EventNetworkResumed:
+		info.Code = ggponet.GGPO_EVENTCODE_CONNECTION_RESUMED
+		info.ConnectionResumed.Player = handle
+		p.Callbacks.OnEvent(&info)
+		break
+	}
 }
 
 func (p *Peer2PeerBackend) AddPlayer(player *ggponet.GGPOPlayer, handle *ggponet.GGPOPlayerHandle) ggponet.GGPOErrorCode {
@@ -286,10 +365,19 @@ func (p *Peer2PeerBackend) IncrementFrame() ggponet.GGPOErrorCode {
 	logrus.Info(fmt.Sprintf("End of frame (%d)...", p.Sync.FrameCount))
 	p.Sync.IncrementFrame()
 	p.DoPoll()
-	//p.PollSyncEvents(); //TODO
+	p.PollSyncEvents()
 
 	return ggponet.GGPO_OK
 }
+
+func (p *Peer2PeerBackend) PollSyncEvents() {
+	var e lib.Event
+	for p.Sync.GetEvent(e) {
+		p.OnSyncEvent(e)
+	}
+}
+
+func (p *Peer2PeerBackend) OnSyncEvent(evt *lib.Event) { }
 
 func (p *Peer2PeerBackend) DisconnectPlayer(player ggponet.GGPOPlayerHandle) ggponet.GGPOErrorCode {
 	var queue int64
@@ -330,6 +418,30 @@ func (p *Peer2PeerBackend) DisconnectPlayerQueue(queue int64, syncto int64) {
 	info.Code = ggponet.GGPO_EVENTCODE_DISCONNECTED_FROM_PEER
 	info.Disconnected.Player = p.QueueToPlayerHandle(queue)
 	p.Callbacks.OnEvent(&info)
+
+	p.CheckInitialSync()
+}
+
+func (p *Peer2PeerBackend) CheckInitialSync() {
+	if p.Synchronizing {
+		// Check to see if everyone is now synchronized.  If so,
+		// go ahead and tell the client that we're ok to accept input.
+		for i := 0; i < int(p.NumPlayers); i++ {
+			if !p.LocalConnectStatus[i].Disconnected && !p.Endpoints[i].IsSynchronized() {
+				return
+			}
+		}
+		for i := 0; i < int(p.NumSpectators); i++ {
+			if !p.Spectators[i].IsSynchronized() {
+				return
+			}
+		}
+
+		var info ggponet.GGPOEvent
+		info.Code = ggponet.GGPO_EVENTCODE_RUNNING
+		p.Callbacks.OnEvent(&info)
+		p.Synchronizing = false
+	}
 }
 
 func (p *Peer2PeerBackend) QueueToPlayerHandle(queue int64) ggponet.GGPOPlayerHandle {
