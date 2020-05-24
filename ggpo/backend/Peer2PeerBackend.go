@@ -197,7 +197,8 @@ func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
 func (p *Peer2PeerBackend) Poll2Players(currentFrame int64) int64 {
 	totalMinConfirmed := int64(lib.MAX_INT)
 	for i := 0; i < int(p.NumPlayers); i++ {
-		//queueConnected := p.Endpoints[i].PeerConnectStatus //TODO: à revoir
+		var ignore int64
+		queueConnected := p.Endpoints[i].GetPeerConnectStatus(int64(i), &ignore)
 
 		if !p.LocalConnectStatus[i].Disconnected {
 			totalMinConfirmed = lib.MIN(p.LocalConnectStatus[i].LastFrame, totalMinConfirmed)
@@ -206,10 +207,10 @@ func (p *Peer2PeerBackend) Poll2Players(currentFrame int64) int64 {
 		logrus.Info(fmt.Sprintf("local endp: connected = %t, last_received = %d, totalMinConfirmed = %d.",
 			!p.LocalConnectStatus[i].Disconnected, p.LocalConnectStatus[i].LastFrame, totalMinConfirmed))
 
-		// if !queueConnected && !p.LocalConnectStatus[i].Disconnected {
-		// 	logrus.Info(fmt.Sprintf("disconnecting i %d by remote request.", i))
-		// 	p.DisconnectPlayerQueue(int64(i), totalMinConfirmed)
-		// }
+		if !queueConnected && !p.LocalConnectStatus[i].Disconnected {
+			logrus.Info(fmt.Sprintf("disconnecting i %d by remote request.", i))
+			p.DisconnectPlayerQueue(int64(i), totalMinConfirmed)
+		}
 		logrus.Info(fmt.Sprintf("totalMinConfirmed = %d.\n", totalMinConfirmed))
 	}
 	return totalMinConfirmed
@@ -275,13 +276,13 @@ func (p *Peer2PeerBackend) PollNetplayEvents() {
 }
 
 func (p *Peer2PeerBackend) OnNetplayPeerEvent(evt *network.Event, queue int64) {
-	p.OnNetplayEvent(evt, p.QueueToPlayerHandle(queue));
+	p.OnNetplayEvent(evt, p.QueueToPlayerHandle(queue))
 	switch evt.Type {
 	case network.EventInput:
 		if !p.LocalConnectStatus[queue].Disconnected {
 			currentRemoteFrame := p.LocalConnectStatus[queue].LastFrame
 			newRemoteFrame := evt.Input.Frame
-			if currentRemoteFrame != -1 && newRemoteFrame != (currentRemoteFrame + 1) {
+			if currentRemoteFrame != -1 && newRemoteFrame != (currentRemoteFrame+1) {
 				logrus.Panic("Assert error on remote frame in netplay peer event")
 			}
 
@@ -379,7 +380,7 @@ func (p *Peer2PeerBackend) PollSyncEvents() {
 	}
 }
 
-func (p *Peer2PeerBackend) OnSyncEvent(evt *lib.Event) { }
+func (p *Peer2PeerBackend) OnSyncEvent(evt *lib.Event) {}
 
 func (p *Peer2PeerBackend) DisconnectPlayer(player ggponet.GGPOPlayerHandle) ggponet.GGPOErrorCode {
 	var queue int64

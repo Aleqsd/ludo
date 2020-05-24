@@ -118,6 +118,10 @@ func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []gg
 	for n.MagicNumber == 0 {
 		n.MagicNumber = rand.Uint64()
 	}
+	n.PeerConnectStatus = make([]ggponet.ConnectStatus, MSG_MAX_PLAYERS)
+	for i := 0; i < len(n.PeerConnectStatus); i++ {
+		n.PeerConnectStatus[i].LastFrame = -1
+	}
 
 	n.SendLatency = platform.GetConfigInt("ggpo.network.delay")
 	n.OopPercent = platform.GetConfigInt("ggpo.oop.percent")
@@ -155,10 +159,8 @@ func (n *Netplay) Read() {
 		length, _, err := n.Conn.ReadFromUDP(netinput)
 		if err != nil {
 			fmt.Println(err)
-			//n.PeerConnectStatus = false
 			return
 		}
-		//n.PeerConnectStatus = true
 		buffer := bytes.NewBuffer(netinput[:length])
 		decoder := gob.NewDecoder(buffer)
 		decoder.Decode(msg)
@@ -279,8 +281,8 @@ func (n *Netplay) Disconnect() ggponet.GGPOErrorCode {
 }
 
 func (n *Netplay) GetPeerConnectStatus(id int64, frame *int64) bool {
-	//TODO:
-	return true
+	*frame = n.PeerConnectStatus[id].LastFrame
+   	return !n.PeerConnectStatus[id].Disconnected
 }
 
 func (n *Netplay) OnSyncRequest(msg *NetplayMsgType) bool {
@@ -306,7 +308,9 @@ func (n *Netplay) OnSyncReply(msg *NetplayMsgType) bool {
 	}
 
 	if !n.Connected {
-		//QueueEvent(Event(Event.Connected))
+		var evt Event
+		evt.Init(EventConnected)
+		n.QueueEvent(&evt)
 		n.Connected = true
 	}
 
@@ -314,17 +318,19 @@ func (n *Netplay) OnSyncReply(msg *NetplayMsgType) bool {
 	n.NetplayState.Sync.RoundTripsRemaining--
 	if n.NetplayState.Sync.RoundTripsRemaining == 0 {
 		logrus.Info("Synchronized!")
-		//TODO: Events
-		//QueueEvent(Event(Event.Synchronized))
+		var evt Event
+		evt.Init(EventSynchronized)
+		n.QueueEvent(&evt)
 		n.CurrentState = Running
 		n.LastReceivedInput.Frame = -1
 		n.RemoteMagicNumber = msg.Hdr.Magic
 	} else {
-		//var evt Event = Event.Synchronizing
-		//evt.u.Synchronizing.Total = NUM_SYNC_PACKETS
-		//evt.u.Synchronizing.Count = NUM_SYNC_PACKETS - n.NetplayState.Sync.RoundTripsRemaining
-		//QueueEvent(evt)
-		//SendSyncRequest()
+		var evt Event
+		evt.Init(EventSynchronizing)
+		evt.Synchronizing.Total = NUM_SYNC_PACKETS
+		evt.Synchronizing.Count = NUM_SYNC_PACKETS - int64(n.NetplayState.Sync.RoundTripsRemaining)
+		n.QueueEvent(&evt)
+		n.SendSyncRequest()
 	}
 	return true
 }
@@ -335,7 +341,9 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 	if disconnectRequested {
 		if n.CurrentState != Disconnected && !n.DisconnectEventSent {
 			logrus.Info("Disconnecting endpoint on remote request.")
-			//QueueEvent(Event(Event.Disconnected))
+			var evt Event
+			evt.Init(EventDisconnected)
+			n.QueueEvent(&evt)
 			n.DisconnectEventSent = true
 		}
 	} else {
@@ -398,13 +406,13 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 				}
 
 				// Send the event to the emualtor
-				// UdpProtocol::Event evt(UdpProtocol::Event::Input);
-				// evt.u.input.input = _last_received_input;
+				var evt Event
+				evt.Init(EventInput)
+				evt.Input = n.LastReceivedInput
+				n.QueueEvent(&evt)
 
 				n.NetplayState.Running.LastInputPacketRecvTime = platform.GetCurrentTimeMS()
 				logrus.Info(fmt.Sprintf("Sending frame %d to emu queue %d", n.LastReceivedInput.Frame, n.Queue))
-
-				//QueueEvent(evt)
 			} else {
 				logrus.Info(fmt.Sprintf("Skipping past frame:(%d) current is %d.", currentFrame, n.LastReceivedInput.Frame))
 			}
@@ -439,9 +447,10 @@ func (n *Netplay) OnInputAck(msg *NetplayMsgType) bool {
 
 func (n *Netplay) OnQualityReport(msg *NetplayMsgType) bool {
 	// send a reply so the other side can compute the round trip transmit time.
-	//    UdpMsg *reply = new UdpMsg(UdpMsg::QualityReply);
-	//    reply->u.quality_reply.pong = msg->u.quality_report.ping;
-	//    SendMsg(reply);
+	var reply *NetplayMsgType
+	reply.Init(QualityReply)
+	reply.QualityReply.Pong = msg.QualityReport.Ping
+	n.SendMsg(reply)
 
 	n.RemoteFrameAdvantage = msg.QualityReport.FrameAdvantage
 	return true
