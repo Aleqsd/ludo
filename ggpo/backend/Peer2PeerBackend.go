@@ -64,7 +64,9 @@ func (p *Peer2PeerBackend) AddRemotePlayer(player *ggponet.GGPOPlayer, queue int
 	} else {
 		p.Endpoints[queue].JoinConnection()
 	}
-	//TODO: rajouter le timeout et le syncrequest
+	p.Endpoints[queue].SetDisconnectTimeout(p.DisconnectTimeout)
+	p.Endpoints[queue].SetDisconnectNotifyStart(p.DisconnectNotifyStart)
+	p.Endpoints[queue].Synchronize()
 }
 
 func (p *Peer2PeerBackend) MustHostConnection(other int64) bool {

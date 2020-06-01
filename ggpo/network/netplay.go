@@ -621,6 +621,12 @@ func (n *Netplay) OnMsg(msg *NetplayMsgType) {
 	}
 }
 
+func (n *Netplay) Synchronize() {
+	n.CurrentState = Syncing
+	n.NetplayState.Sync.RoundTripsRemaining = NUM_SYNC_PACKETS
+	n.SendSyncRequest()
+}
+
 func (n *Netplay) IsSynchronized() bool {
 	return n.CurrentState == Running
 }
