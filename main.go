@@ -9,11 +9,9 @@ import (
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/libretro/ludo/audio"
 	"github.com/libretro/ludo/core"
-	"github.com/libretro/ludo/delay"
 	"github.com/libretro/ludo/history"
 	"github.com/libretro/ludo/input"
 	"github.com/libretro/ludo/menu"
-	"github.com/libretro/ludo/netplay"
 	ntf "github.com/libretro/ludo/notifications"
 	"github.com/libretro/ludo/playlists"
 	"github.com/libretro/ludo/scanner"
@@ -37,17 +35,7 @@ func runLoop(vid *video.Video, m *menu.Menu) {
 		ntf.Process(dt)
 		vid.ResizeViewport()
 		if !state.Global.MenuActive {
-			log.Println(delay.Count)
-
-			input.Reset()
-			input.LocalInputs()
-
-			if state.Global.CoreRunning && delay.Count < delay.Delay {
-				input.Poll()
-			}
-
-			if state.Global.CoreRunning && delay.Count >= delay.Delay {
-				input.DeQueue()
+			if state.Global.CoreRunning {
 				state.Global.Core.Run()
 				if state.Global.Core.FrameTimeCallback != nil {
 					state.Global.Core.FrameTimeCallback.Callback(state.Global.Core.FrameTimeCallback.Reference)
@@ -84,8 +72,6 @@ func main() {
 	flag.StringVar(&state.Global.CorePath, "L", "", "Path to the libretro core")
 	flag.BoolVar(&state.Global.Verbose, "v", false, "Verbose logs")
 	flag.BoolVar(&state.Global.LudOS, "ludos", false, "Expose the features related to LudOS")
-	flag.StringVar(&netplay.Listen, "listen", "", "Example: :8080")
-	flag.StringVar(&netplay.Join, "join", "", "Peer IP and port to join")
 	flag.Parse()
 	args := flag.Args()
 
@@ -131,8 +117,6 @@ func main() {
 			ntf.DisplayAndLog(ntf.Error, "Menu", err.Error())
 		} else {
 			m.WarpToQuickMenu()
-
-			go delay.ReceiveInputs()
 		}
 	}
 
