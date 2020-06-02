@@ -7,16 +7,16 @@ import (
 
 var Test = false
 var ggpoSession *ggponet.GGPOSession = nil
-const FRAME_DELAY = 2 //TODO: Make frame delay depends on local network connection
+var ngs NonGameState = NonGameState{}
 
-//TODO: Non-gamestate?
+const FRAME_DELAY = 2 //TODO: Make frame delay depends on local network connection
 
 func Init(numPlayers int64, players []ggponet.GGPOPlayer, numSpectators int64, test bool) {
 	var result ggponet.GGPOErrorCode
 
 	// Initialize the game state
 	//gs.Init(hwnd, num_players);
-	//ngs.num_players = num_players;
+	ngs.NumPlayers = numPlayers
 
 	// Fill in a ggpo callbacks structure to pass to start_session.
 	var cb ggponet.GGPOSessionCallbacks = &Callbacks{}
@@ -37,36 +37,40 @@ func Init(numPlayers int64, players []ggponet.GGPOPlayer, numSpectators int64, t
 	for i := 0; i < int(numPlayers+numSpectators); i++ {
 		var handle ggponet.GGPOPlayerHandle
 		result = ggpo.AddPlayer(ggpoSession, &players[i], &handle)
-		//ngs.players[i].Handle = Handle
-		//ngs.players[i].Type = players[i].Type
+		ngs.Players[i].Handle = handle
+		ngs.Players[i].Type = players[i].Type
 		if players[i].Type == ggponet.GGPO_PLAYERTYPE_LOCAL {
-			//ngs.players[i].connect_progress = 100
-			//ngs.local_player_handle = handle
-			//ngs.SetConnectState(handle, Connecting)
+			ngs.Players[i].ConnectProgress = 100
+			ngs.LocalPlayerHandle = handle
+			ngs.SetConnectState(handle, Connecting)
 			ggpo.SetFrameDelay(ggpoSession, handle, FRAME_DELAY)
 		} else {
-			//ngs.players[i].connect_progress = 0
+			ngs.Players[i].ConnectProgress = 0
 		}
+	}
+
+	if result != ggponet.GGPO_OK {
+		//TODO: panic
 	}
 }
 
-func InitSpectator(HWND hwnd, unsigned short localport, int num_players, char *host_ip, unsigned short host_port) {
+func InitSpectator(numPlayers int64, hostIp string, hostPort uint8) {
 	//TODO: Spectators
-	var result ggponet.GGPOErrorCode
+	//var result ggponet.GGPOErrorCode
 
 	// Initialize the game state
 	//gs.Init(hwnd, num_players);
-	//ngs.num_players = num_players;
+	ngs.NumPlayers = numPlayers
 
 	// Fill in a ggpo callbacks structure to pass to start_session.
-	var cb ggponet.GGPOSessionCallbacks = &Callbacks{}
+	//var cb ggponet.GGPOSessionCallbacks = &Callbacks{}
 
 	//result = ggpo_start_spectating(&ggpo, &cb, "vectorwar", num_players, sizeof(int), localport, host_ip, host_port)
 }
 
 func DisconnectPlayer(player int64) {
-	//if player < ngs.num_players {
-		var result ggponet.GGPOErrorCode = ggpo.DisconnectPlayer(ggpoSession, ngs.players[player].handle)
+	if player < ngs.NumPlayers {
+		var result ggponet.GGPOErrorCode = ggpo.DisconnectPlayer(ggpoSession, ngs.Players[player].Handle)
 		if ggponet.GGPO_SUCCEEDED(result) {
 			//sprintf_s(logbuf, ARRAYSIZE(logbuf), "Disconnected player %d.\n", player)
 			//TODO: log
@@ -74,5 +78,31 @@ func DisconnectPlayer(player int64) {
 			//sprintf_s(logbuf, ARRAYSIZE(logbuf), "Error while disconnecting player (err:%d).\n", result)
 			//TODO: log
 		}
-	//}
+	}
+}
+
+func AdvanceFrame(inputs []byte, disconnectFlags int64) {
+	//gs.Update(inputs, disconnect_flags);
+
+	// update the checksums to display in the top of the window.  this
+	// helps to detect desyncs.
+	//TODO: Handle gs
+	/*ngs.Now.Framenumber = gs._framenumber;
+	ngs.Now.Checksum = fletcher32_checksum((short *)&gs, sizeof(gs) / 2);
+	if ((gs._framenumber % 90) == 0) {
+		ngs.periodic = ngs.now;
+	}*/
+
+	// Notify ggpo that we've moved forward exactly 1 frame.
+	ggpo.AdvanceFrame(ggpoSession)
+
+	// Update the performance monitor display.
+	var handles [MAX_PLAYERS]ggponet.GGPOPlayerHandle
+	count := 0
+	for i := 0; i < int(ngs.NumPlayers); i++ {
+		if ngs.Players[i].Type == ggponet.GGPO_PLAYERTYPE_REMOTE {
+			handles[count] = ngs.Players[i].Handle
+			count++
+		}
+	}
 }
