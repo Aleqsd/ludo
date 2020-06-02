@@ -497,7 +497,7 @@ func (p *Peer2PeerBackend) AddSpectator(ip string, port uint8) ggponet.GGPOError
 func (p *Peer2PeerBackend) SetDisconnectTimeout(timeout int64) ggponet.GGPOErrorCode {
 	p.DisconnectTimeout = timeout
 	for i := 0; i < int(p.NumPlayers); i++ {
-		if p.Endpoints[i].IsInitialized() {
+		if p.Endpoints[i].IsInitialized {
 			p.Endpoints[i].SetDisconnectTimeout(p.DisconnectTimeout)
 		}
 	}
@@ -507,7 +507,7 @@ func (p *Peer2PeerBackend) SetDisconnectTimeout(timeout int64) ggponet.GGPOError
 func (p *Peer2PeerBackend) SetDisconnectNotifyStart(timeout int64) ggponet.GGPOErrorCode {
 	p.DisconnectNotifyStart = timeout
 	for i := 0; i < int(p.NumPlayers); i++ {
-		if p.Endpoints[i].IsInitialized() {
+		if p.Endpoints[i].IsInitialized {
 			p.Endpoints[i].SetDisconnectNotifyStart(p.DisconnectNotifyStart)
 		}
 	}

@@ -85,12 +85,14 @@ type Netplay struct {
 	KbpsSent              int64
 	BytesSent             int64
 	PacketsSent           int64
+	IsInitialized         bool
 }
 
 func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []ggponet.ConnectStatus, poll *lib.Poll) {
 	n.LocalAddr, _ = net.ResolveUDPAddr("udp4", "127.0.0.1:8089")
 	n.RemoteAddr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", remotePlayer.IPAddress, int(remotePlayer.Port)))
 	n.Queue = queue
+	n.IsInitialized = false
 	n.LastReceivedInput.SimpleInit(-1, nil, 1)
 	n.LastAckedInput.SimpleInit(-1, nil, 1)
 	n.LastSentInput.SimpleInit(-1, nil, 1)
@@ -255,6 +257,7 @@ func (n *Netplay) HostConnection() {
 		return
 	}
 	defer n.Conn.Close()
+	n.IsInitialized = true
 	go n.Read()
 }
 
@@ -267,6 +270,7 @@ func (n *Netplay) JoinConnection() {
 		return
 	}
 	defer n.Conn.Close()
+	n.IsInitialized = true
 	go n.Read()
 }
 

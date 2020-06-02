@@ -49,3 +49,30 @@ func Init(numPlayers int64, players []ggponet.GGPOPlayer, numSpectators int64, t
 		}
 	}
 }
+
+func InitSpectator(HWND hwnd, unsigned short localport, int num_players, char *host_ip, unsigned short host_port) {
+	//TODO: Spectators
+	var result ggponet.GGPOErrorCode
+
+	// Initialize the game state
+	//gs.Init(hwnd, num_players);
+	//ngs.num_players = num_players;
+
+	// Fill in a ggpo callbacks structure to pass to start_session.
+	var cb ggponet.GGPOSessionCallbacks = &Callbacks{}
+
+	//result = ggpo_start_spectating(&ggpo, &cb, "vectorwar", num_players, sizeof(int), localport, host_ip, host_port)
+}
+
+func DisconnectPlayer(player int64) {
+	//if player < ngs.num_players {
+		var result ggponet.GGPOErrorCode = ggpo.DisconnectPlayer(ggpoSession, ngs.players[player].handle)
+		if ggponet.GGPO_SUCCEEDED(result) {
+			//sprintf_s(logbuf, ARRAYSIZE(logbuf), "Disconnected player %d.\n", player)
+			//TODO: log
+		} else {
+			//sprintf_s(logbuf, ARRAYSIZE(logbuf), "Error while disconnecting player (err:%d).\n", result)
+			//TODO: log
+		}
+	//}
+}
