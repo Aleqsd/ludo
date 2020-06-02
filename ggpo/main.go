@@ -75,14 +75,14 @@ func GetNetworkStats(ggpo *ggponet.GGPOSession, player ggponet.GGPOPlayerHandle,
 	return (*ggpo).GetNetworkStats(stats, player)
 }
 
-func SetDisconnectTimeout(ggpo *ggponet.GGPOSession, timeout int64) {
+func SetDisconnectTimeout(ggpo *ggponet.GGPOSession, timeout int64) ggponet.GGPOErrorCode {
 	if ggpo == nil {
 		return ggponet.GGPO_ERRORCODE_INVALID_SESSION
 	}
 	return (*ggpo).SetDisconnectTimeout(timeout)
 }
 
-func SetDisconnectNotifyStart(ggpo *ggponet.GGPOSession, timeout int64) {
+func SetDisconnectNotifyStart(ggpo *ggponet.GGPOSession, timeout int64) ggponet.GGPOErrorCode {
 	if ggpo == nil {
 		return ggponet.GGPO_ERRORCODE_INVALID_SESSION
 	}

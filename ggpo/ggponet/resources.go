@@ -18,8 +18,8 @@ type GGPOSession interface {
 	GetNetworkStats(stats *GGPONetworkStats, handle GGPOPlayerHandle) GGPOErrorCode
 	//Logv(fmt string, va_list list) GGPOErrorCode
 	SetFrameDelay(player GGPOPlayerHandle, delay int64) GGPOErrorCode
-	//SetDisconnectTimeout(timeout int64) GGPOErrorCode
-	//SetDisconnectNotifyStart(timeout int64) GGPOErrorCode
+	SetDisconnectTimeout(timeout int64) GGPOErrorCode
+	SetDisconnectNotifyStart(timeout int64) GGPOErrorCode
 }
 
 type GGPOPlayerHandle int64
