@@ -8,11 +8,13 @@ import (
 var Test = false
 var ggpoSession *ggponet.GGPOSession = nil
 var ngs NonGameState = NonGameState{}
+var syncTest = false
 
 const FRAME_DELAY = 2 //TODO: Make frame delay depends on local network connection
 
 func Init(numPlayers int64, players []ggponet.GGPOPlayer, numSpectators int64, test bool) {
 	var result ggponet.GGPOErrorCode
+	syncTest = test
 
 	// Initialize the game state
 	//gs.Init(hwnd, num_players);
@@ -21,7 +23,7 @@ func Init(numPlayers int64, players []ggponet.GGPOPlayer, numSpectators int64, t
 	// Fill in a ggpo callbacks structure to pass to start_session.
 	var cb ggponet.GGPOSessionCallbacks = &Callbacks{}
 
-	if test {
+	if syncTest {
 		//result = ggpo.StartSynctest(&ggpoSession, &cb, "ludo", num_players, sizeof(int), 1)
 	} else {
 		//TODO: Define optimal input size (default 100)
@@ -105,4 +107,39 @@ func AdvanceFrame(inputs []byte, disconnectFlags int64) {
 			count++
 		}
 	}
+}
+
+//TODO: Define how to get inputs
+func RunFrame() {
+	var result ggponet.GGPOErrorCode = ggponet.GGPO_OK
+	//var disconnectFlags int64
+	//var inputs [MAX_SHIPS]int64 = { 0 };
+
+	/*if ngs.LocalPlayerHandle != ggponet.GGPO_INVALID_HANDLE {
+		int input = ReadInputs(hwnd)
+		if syncTest {
+			input = randInt64() // test: use random inputs to demonstrate sync testing
+		}
+		result = ggpo.AddLocalInput(ggpoSession, ngs.LocalPlayerHandle, &input, sizeof(input))
+	}
+
+	// synchronize these inputs with ggpo.  If we have enough input to proceed
+	// ggpo will modify the input list with the correct inputs to use and
+	// return 1.
+	if ggponet.GGPO_SUCCEEDED(result) {
+		result = ggpo.SynchronizeInput(ggpo, (void *)inputs, sizeof(int) * MAX_SHIPS, &disconnectFlags)
+		if ggponet.GGPO_SUCCEEDED(result) {
+			// inputs[0] and inputs[1] contain the inputs for p1 and p2.  Advance
+			// the game by 1 frame using those inputs.
+			ggpo.AdvanceFrame(inputs, disconnectFlags)
+		}
+	}*/
+
+	if result != ggponet.GGPO_OK {
+		//TODO: panic
+	}
+}
+
+func Idle() {
+	ggpo.Idle(ggpoSession)
 }
