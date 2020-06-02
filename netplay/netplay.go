@@ -2,8 +2,7 @@ package netplay
 
 import (
 	"net"
-
-	ntf "github.com/libretro/ludo/notifications"
+	//ntf "github.com/libretro/ludo/notifications"
 )
 
 // Listen is used by the netplay host, listening address and port
@@ -16,7 +15,7 @@ var Join string
 var Conn net.Conn
 
 // Init initialises a netplay session between two players
-func Init() {
+/*func Init() {
 	if Listen != "" { // Host mode
 		ln, err := net.Listen("tcp", Listen)
 		if err != nil {
@@ -39,4 +38,4 @@ func Init() {
 		}
 		ntf.DisplayAndLog(ntf.Success, "Netplay", "Connected.")
 	}
-}
+}*/
