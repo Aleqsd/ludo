@@ -7,15 +7,13 @@ import (
 	"log"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
-	"github.com/libretro/ludo/delay"
 	"github.com/libretro/ludo/libretro"
-	"github.com/libretro/ludo/netplay"
 	ntf "github.com/libretro/ludo/notifications"
 	"github.com/libretro/ludo/video"
 )
 
 // MaxPlayers is the maximum number of players to poll input for
-const MaxPlayers = 5
+const MaxPlayers = 4
 
 type joybinds map[bind]uint32
 
@@ -38,8 +36,8 @@ var (
 	Released inputstate // keys just released during this frame
 	Pressed  inputstate // keys just pressed during this frame
 
-	localPlayerInput [delay.Delay][20]bool
-	localCount       uint64
+	//localPlayerInput [delay.Delay][20]bool
+	//localCount       uint64
 )
 
 // Hot keys
@@ -79,7 +77,7 @@ func Init(v *video.Video) {
 	vid = v
 	glfw.SetJoystickCallback(joystickCallback)
 
-	localPlayerInput = [delay.Delay][20]bool{}
+	//localPlayerInput = [delay.Delay][20]bool{}
 }
 
 // Resets all retropad buttons to false
@@ -127,7 +125,7 @@ func keyboardToPlayer(st inputstate, p int) inputstate {
 	}
 	return st
 }
-
+/*
 func playerToNet(st inputstate, p int) {
 	netoutput := [20]byte{}
 	for i, b := range st[p] {
@@ -151,7 +149,7 @@ func netToPlayer(st inputstate, p int) inputstate {
 		}
 	}
 	return st
-}
+}*/
 
 // pollKeyboard processes keyboard keys
 func pollKeyboard(st inputstate) inputstate {
@@ -190,20 +188,24 @@ func getPressedReleased(new inputstate, old inputstate) (inputstate, inputstate)
 // Poll calculates the input state. It is meant to be called for each frame.
 func Poll() {
 	log.Println("poll")
+	NewState = reset(NewState)
+	NewState = pollJoypads(NewState)
+	NewState = pollKeyboard(NewState)
 
 	Pressed, Released = getPressedReleased(NewState, OldState)
 
 	// Store the old input state for comparisions
 	OldState = NewState
 
-	playerToNet(NewState, 0)
+	//playerToNet(NewState, 0)
 }
 
 // Set the NewState at false everywhere
+/*
 func Reset() {
 	NewState = reset(NewState)
-}
-
+}*/
+/*
 // Get the remote player queue and the localPlayerInput
 func DeQueue() {
 	log.Println("DeQueue")
@@ -211,18 +213,18 @@ func DeQueue() {
 	remotePlayerInput := <-delay.RemoteInputQueue
 	NewState[0] = localPlayerInput[localCount%delay.Delay]
 	NewState[1] = remotePlayerInput
-}
-
+}*/
+/*
 // Get the local input into localPlayerInput
 func LocalInputs() {
 	var st inputstate
 	st = reset(st)
 	st = pollJoypads(st)
 	st = pollKeyboard(st)
-	localPlayerInput[localCount%delay.Delay] = st[0]
+	localPlayerInput[localCount] = st[0]
 	localCount++
 }
-
+*/
 // State is a callback passed to core.SetInputState
 // It returns 1 if the button corresponding to the parameters is pressed
 func State(port uint, device uint32, index uint, id uint) int16 {

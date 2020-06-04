@@ -7,6 +7,7 @@ import (
 
 	"github.com/libretro/ludo/ggpo"
 	"github.com/libretro/ludo/ggpo/ggponet"
+	local "github.com/libretro/ludo/input"
 )
 
 func GetCurrentTimeMS() uint64 {
@@ -47,7 +48,7 @@ func (c *Callbacks) AdvanceFrame(flags int64) {
 
 	// Make sure we fetch new inputs from GGPO and use those to update
 	// the game state instead of reading from the keyboard.
-	ggpo.SynchronizeInput(ggpoSession, inputs, 100*ggponet.GGPO_MAX_PLAYERS, &disconnectFlags)
+	ggpo.SynchronizeInput(ggpoSession, inputs, local.ActionLast*ggponet.GGPO_MAX_PLAYERS, &disconnectFlags)
 	AdvanceFrame(inputs, disconnectFlags)
 }
 

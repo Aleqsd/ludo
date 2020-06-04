@@ -3,6 +3,7 @@ package netplay
 import (
 	"github.com/libretro/ludo/ggpo"
 	"github.com/libretro/ludo/ggpo/ggponet"
+	local "github.com/libretro/ludo/input"
 )
 
 var Test = false
@@ -26,8 +27,8 @@ func Init(numPlayers int64, players []ggponet.GGPOPlayer, numSpectators int64, t
 	if syncTest {
 		//result = ggpo.StartSynctest(&ggpoSession, &cb, "ludo", num_players, sizeof(int), 1)
 	} else {
-		//TODO: Define optimal input size (default 100)
-		result = ggpo.StartSession(&ggpoSession, cb, "ludo", numPlayers, 100)
+		//TODO: Define optimal input size (default ActionLast)
+		result = ggpo.StartSession(&ggpoSession, cb, "ludo", numPlayers, int64(local.ActionLast))
 	}
 
 	// automatically disconnect clients after 3000 ms and start our count-down timer
@@ -109,14 +110,14 @@ func AdvanceFrame(inputs []byte, disconnectFlags int64) {
 	}
 }
 
-//TODO: Define how to get inputs
+//TODO: Define how to get the inputs
 func RunFrame() {
 	var result ggponet.GGPOErrorCode = ggponet.GGPO_OK
-	//var disconnectFlags int64
-	//var inputs [MAX_SHIPS]int64 = { 0 };
+	var disconnectFlags int64
+	inputs := make([]byte, ggponet.GGPO_MAX_PLAYERS)
 
-	/*if ngs.LocalPlayerHandle != ggponet.GGPO_INVALID_HANDLE {
-		int input = ReadInputs(hwnd)
+	if ngs.LocalPlayerHandle != ggponet.GGPO_INVALID_HANDLE {
+		input = local.NewState[0]
 		if syncTest {
 			input = randInt64() // test: use random inputs to demonstrate sync testing
 		}
@@ -133,7 +134,7 @@ func RunFrame() {
 			// the game by 1 frame using those inputs.
 			ggpo.AdvanceFrame(inputs, disconnectFlags)
 		}
-	}*/
+	}
 
 	if result != ggponet.GGPO_OK {
 		//TODO: panic
