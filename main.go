@@ -5,12 +5,15 @@ import (
 	"log"
 	"runtime"
 	"time"
+	"strings"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/libretro/ludo/audio"
 	"github.com/libretro/ludo/core"
 	"github.com/libretro/ludo/history"
 	"github.com/libretro/ludo/input"
+	"github.com/libretro/ludo/netplay"
+	"github.com/libretro/ludo/ggpo/ggponet"
 	"github.com/libretro/ludo/menu"
 	ntf "github.com/libretro/ludo/notifications"
 	"github.com/libretro/ludo/playlists"
@@ -72,12 +75,17 @@ func main() {
 	flag.StringVar(&state.Global.CorePath, "L", "", "Path to the libretro core")
 	flag.BoolVar(&state.Global.Verbose, "v", false, "Verbose logs")
 	flag.BoolVar(&state.Global.LudOS, "ludos", false, "Expose the features related to LudOS")
+	numPlayers := flag.Int("n", 0, "Number of players")
 	flag.Parse()
 	args := flag.Args()
+	playersIP := make([]string, &numPlayers)
 
 	var gamePath string
 	if len(args) > 0 {
 		gamePath = args[0]
+		for i := 1; i < len(args); i++ {
+			playersIP[i] = args[i]
+		}
 	}
 
 	if err := glfw.Init(); err != nil {
@@ -89,6 +97,8 @@ func main() {
 	if err != nil {
 		log.Println("Can't load game database:", err)
 	}
+
+	InitNetwork(&numPlayers, playersIP)
 
 	playlists.Load()
 
@@ -127,4 +137,40 @@ func main() {
 
 	// Unload and deinit in the core.
 	core.Unload()
+}
+
+// ./ludo -n=2 -L cores/snes9x_libretro.dll C:/Users/a763716/Downloads/Street_Fighter_II_Turbo_U.smc local IP_REMOTE:8089
+// ./ludo -n=2 -L cores/snes9x_libretro.dll C:/Users/a763716/Downloads/Street_Fighter_II_Turbo_U.smc IP_REMOTE:8089 local
+
+func InitNetwork(numPlayers int, playersIP []string) {
+	var players [ggponet.GGPO_MAX_SPECTATORS + ggponet.GGPO_MAX_PLAYERS]ggponet.GGPOPlayer
+	localPlayer := 0
+
+	for i := 0; i < numPlayers; i++ {
+		players[i].Size = len(players[i])
+		players[i].PlayerNum = i + 1
+		if playersIP[i] == "local" {
+			players[i].Type = ggponet.GGPO_PLAYERTYPE_LOCAL
+			localPlayer = i
+			continue
+		}		
+		players[i].Type = ggponet.GGPO_PLAYERTYPE_REMOTE
+		players[i].Remote.IPAddress = strings.Split(playersIP[i], ":")[0]
+		players[i].Remote.Port = strings.Split(playersIP[i], ":")[1]
+	}
+	//TODO: Spectators
+	// these are spectators...
+	/*num_spectators := 0
+	while (offset < __argc) {
+		players[i].type = GGPO_PLAYERTYPE_SPECTATOR;
+		if (swscanf_s(__wargv[offset++], L"%[^:]:%hd", wide_ip_buffer, wide_ip_buffer_size, &players[i].u.remote.port) != 2) {
+		Syntax();
+		return 1;
+		}
+		wcstombs_s(nullptr, players[i].u.remote.ip_address, ARRAYSIZE(players[i].u.remote.ip_address), wide_ip_buffer, _TRUNCATE);
+		i++;
+		num_spectators++;
+	}*/
+
+	netplay.Init(numPlayers, players, 0);
 }
