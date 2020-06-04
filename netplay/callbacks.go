@@ -43,12 +43,12 @@ func (c *Callbacks) FreeBuffer(buffer *byte) {
 }
 
 func (c *Callbacks) AdvanceFrame(flags int64) {
-	inputs := make([]byte, ggponet.GGPO_MAX_PLAYERS)
+	inputs := make([]byte, ggponet.GGPO_MAX_PLAYERS) //TODO: Not sure GGPO_MAX_PLAYERS is usefull for this make (make is done in sync.go when SynchronizeInput() is called)
 	var disconnectFlags int64
 
 	// Make sure we fetch new inputs from GGPO and use those to update
 	// the game state instead of reading from the keyboard.
-	ggpo.SynchronizeInput(ggpoSession, inputs, local.ActionLast*ggponet.GGPO_MAX_PLAYERS, &disconnectFlags)
+	ggpo.SynchronizeInput(ggpoSession, inputs, int64(local.ActionLast*ggponet.GGPO_MAX_PLAYERS), &disconnectFlags)
 	AdvanceFrame(inputs, disconnectFlags)
 }
 

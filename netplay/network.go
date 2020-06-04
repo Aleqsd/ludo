@@ -4,9 +4,9 @@ import (
 	"github.com/libretro/ludo/ggpo"
 	"github.com/libretro/ludo/ggpo/ggponet"
 	local "github.com/libretro/ludo/input"
+    "math/rand"
 )
 
-var Test = false
 var ggpoSession *ggponet.GGPOSession = nil
 var ngs NonGameState = NonGameState{}
 var syncTest = false
@@ -85,11 +85,11 @@ func DisconnectPlayer(player int64) {
 }
 
 func AdvanceFrame(inputs []byte, disconnectFlags int64) {
-	//gs.Update(inputs, disconnect_flags);
+	local.NewState[1] = ByteToBool(inputs)
 
 	// update the checksums to display in the top of the window.  this
 	// helps to detect desyncs.
-	//TODO: Handle gs
+	//TODO: Handle gs? (maybe not usefull)
 	/*ngs.Now.Framenumber = gs._framenumber;
 	ngs.Now.Checksum = fletcher32_checksum((short *)&gs, sizeof(gs) / 2);
 	if ((gs._framenumber % 90) == 0) {
@@ -110,29 +110,59 @@ func AdvanceFrame(inputs []byte, disconnectFlags int64) {
 	}
 }
 
+func BoolToByte(inputs [local.ActionLast]bool) []byte {
+	byteInputs := make([]byte, len(inputs))
+	for i, b := range inputs {
+		if b {
+			byteInputs[i] = 1
+		}
+	}
+	return byteInputs
+}
+
+func ByteToBool(inputs []byte) [local.ActionLast]bool {
+	boolInputs := [local.ActionLast]bool{}
+	for i, b := range inputs {
+		if b == 1 {
+			boolInputs[i] = true
+		}
+	}
+	return boolInputs
+}
+
+func RandBoolSlice() [local.ActionLast]bool {
+	boolInputs := [local.ActionLast]bool{}
+	for i := 0; i < int(local.ActionLast); i++ {
+		if rand.Intn(1) == 1 {
+			boolInputs[i] = true
+		}
+	}
+	return boolInputs
+}
+
 //TODO: Define how to get the inputs
 func RunFrame() {
 	var result ggponet.GGPOErrorCode = ggponet.GGPO_OK
 	var disconnectFlags int64
-	inputs := make([]byte, ggponet.GGPO_MAX_PLAYERS)
+	inputs := make([]byte, ggponet.GGPO_MAX_PLAYERS)  //TODO: Not sure GGPO_MAX_PLAYERS is usefull for this make (make is done in sync.go when SynchronizeInput() is called)
 
 	if ngs.LocalPlayerHandle != ggponet.GGPO_INVALID_HANDLE {
-		input = local.NewState[0]
+		input := BoolToByte(local.NewState[0])
 		if syncTest {
-			input = randInt64() // test: use random inputs to demonstrate sync testing
+			input = BoolToByte(RandBoolSlice()) // test: use random inputs to demonstrate sync testing
 		}
-		result = ggpo.AddLocalInput(ggpoSession, ngs.LocalPlayerHandle, &input, sizeof(input))
+		result = ggpo.AddLocalInput(ggpoSession, ngs.LocalPlayerHandle, input, int64(len(input)))
 	}
 
 	// synchronize these inputs with ggpo.  If we have enough input to proceed
 	// ggpo will modify the input list with the correct inputs to use and
 	// return 1.
 	if ggponet.GGPO_SUCCEEDED(result) {
-		result = ggpo.SynchronizeInput(ggpo, (void *)inputs, sizeof(int) * MAX_SHIPS, &disconnectFlags)
+		result = ggpo.SynchronizeInput(ggpoSession, inputs, int64(local.ActionLast * ggponet.GGPO_MAX_PLAYERS), &disconnectFlags)
 		if ggponet.GGPO_SUCCEEDED(result) {
 			// inputs[0] and inputs[1] contain the inputs for p1 and p2.  Advance
 			// the game by 1 frame using those inputs.
-			ggpo.AdvanceFrame(inputs, disconnectFlags)
+			AdvanceFrame(inputs, disconnectFlags)
 		}
 	}
 
