@@ -172,5 +172,5 @@ func InitNetwork(numPlayers int, playersIP []string) {
 		num_spectators++;
 	}*/
 
-	netplay.Init(numPlayers, players, 0);
+	netplay.Init(numPlayers, players, 0, false)
 }
