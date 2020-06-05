@@ -1,10 +1,13 @@
 package netplay
 
 import (
+	"fmt"
+	"math/rand"
+
 	"github.com/libretro/ludo/ggpo"
 	"github.com/libretro/ludo/ggpo/ggponet"
 	local "github.com/libretro/ludo/input"
-    "math/rand"
+	"github.com/sirupsen/logrus"
 )
 
 var ggpoSession *ggponet.GGPOSession = nil
@@ -53,7 +56,7 @@ func Init(numPlayers int64, players []ggponet.GGPOPlayer, numSpectators int64, t
 	}
 
 	if result != ggponet.GGPO_OK {
-		//TODO: panic
+		logrus.Panic("Error during Network Init")
 	}
 }
 
@@ -75,11 +78,9 @@ func DisconnectPlayer(player int64) {
 	if player < ngs.NumPlayers {
 		var result ggponet.GGPOErrorCode = ggpo.DisconnectPlayer(ggpoSession, ngs.Players[player].Handle)
 		if ggponet.GGPO_SUCCEEDED(result) {
-			//sprintf_s(logbuf, ARRAYSIZE(logbuf), "Disconnected player %d.\n", player)
-			//TODO: log
+			logrus.Info(fmt.Sprintf("Disconnected player %d", player))
 		} else {
-			//sprintf_s(logbuf, ARRAYSIZE(logbuf), "Error while disconnecting player (err:%d).\n", result)
-			//TODO: log
+			logrus.Error(fmt.Sprintf("Error while disconnecting player (err:%d)", result))
 		}
 	}
 }
@@ -144,7 +145,7 @@ func RandBoolSlice() [local.ActionLast]bool {
 func RunFrame() {
 	var result ggponet.GGPOErrorCode = ggponet.GGPO_OK
 	var disconnectFlags int64
-	inputs := make([]byte, ggponet.GGPO_MAX_PLAYERS)  //TODO: Not sure GGPO_MAX_PLAYERS is usefull for this make (make is done in sync.go when SynchronizeInput() is called)
+	inputs := make([]byte, ggponet.GGPO_MAX_PLAYERS) //TODO: Not sure GGPO_MAX_PLAYERS is usefull for this make (make is done in sync.go when SynchronizeInput() is called)
 
 	if ngs.LocalPlayerHandle != ggponet.GGPO_INVALID_HANDLE {
 		input := BoolToByte(local.NewState[0])
@@ -158,7 +159,7 @@ func RunFrame() {
 	// ggpo will modify the input list with the correct inputs to use and
 	// return 1.
 	if ggponet.GGPO_SUCCEEDED(result) {
-		result = ggpo.SynchronizeInput(ggpoSession, inputs, int64(local.ActionLast * ggponet.GGPO_MAX_PLAYERS), &disconnectFlags)
+		result = ggpo.SynchronizeInput(ggpoSession, inputs, int64(local.ActionLast*ggponet.GGPO_MAX_PLAYERS), &disconnectFlags)
 		if ggponet.GGPO_SUCCEEDED(result) {
 			// inputs[0] and inputs[1] contain the inputs for p1 and p2.  Advance
 			// the game by 1 frame using those inputs.
@@ -167,7 +168,7 @@ func RunFrame() {
 	}
 
 	if result != ggponet.GGPO_OK {
-		//TODO: panic
+		logrus.Panic("Error during Network RunFrame")
 	}
 }
 

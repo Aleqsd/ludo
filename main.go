@@ -4,24 +4,25 @@ import (
 	"flag"
 	"log"
 	"runtime"
-	"time"
-	"strings"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/libretro/ludo/audio"
 	"github.com/libretro/ludo/core"
+	"github.com/libretro/ludo/ggpo/ggponet"
 	"github.com/libretro/ludo/history"
 	"github.com/libretro/ludo/input"
-	"github.com/libretro/ludo/netplay"
-	"github.com/libretro/ludo/ggpo/ggponet"
 	"github.com/libretro/ludo/menu"
+	"github.com/libretro/ludo/netplay"
 	ntf "github.com/libretro/ludo/notifications"
 	"github.com/libretro/ludo/playlists"
 	"github.com/libretro/ludo/scanner"
 	"github.com/libretro/ludo/settings"
 	"github.com/libretro/ludo/state"
 	"github.com/libretro/ludo/video"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -144,20 +145,20 @@ func main() {
 // ./ludo -n=2 -L cores/snes9x_libretro.dll C:/Users/a763716/Downloads/Street_Fighter_II_Turbo_U.smc IP_REMOTE:8089 local
 
 func InitNetwork(numPlayers int, playersIP []string) {
-	players := make([]ggponet.GGPOPlayer, ggponet.GGPO_MAX_SPECTATORS + ggponet.GGPO_MAX_PLAYERS)
+	players := make([]ggponet.GGPOPlayer, ggponet.GGPO_MAX_SPECTATORS+ggponet.GGPO_MAX_PLAYERS)
 
 	for i := 0; i < numPlayers; i++ {
 		players[i].PlayerNum = int64(i + 1)
 		if playersIP[i] == "local" {
 			players[i].Type = ggponet.GGPO_PLAYERTYPE_LOCAL
 			continue
-		}		
+		}
 		players[i].Type = ggponet.GGPO_PLAYERTYPE_REMOTE
 		players[i].IPAddress = strings.Split(playersIP[i], ":")[0]
 		port, err := strconv.Atoi(strings.Split(playersIP[i], ":")[1])
 		players[i].Port = uint8(port)
 		if err != nil {
-			//TODO: panic
+			logrus.Panic("Error in InitNetwork")
 		}
 	}
 	//TODO: Spectators
