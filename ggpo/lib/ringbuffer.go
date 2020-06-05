@@ -5,7 +5,7 @@ import "github.com/sirupsen/logrus"
 type T interface{}
 
 type RingBuffer struct {
-	Elements []T
+	Elements []*T
 	Head     int64
 	Tail     int64
 	Size     int64
@@ -17,10 +17,10 @@ func (r *RingBuffer) Init(n int64) {
 	r.Tail = 0
 	r.Size = 0
 	r.N = n
-	r.Elements = make([]T, r.N)
+	r.Elements = make([]*T, r.N)
 }
 
-func (r *RingBuffer) Front() T {
+func (r *RingBuffer) Front() *T {
 	if r.Size == r.N {
 		logrus.Panic("Assert error ringbuffer size error")
 	}

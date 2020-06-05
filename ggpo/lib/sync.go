@@ -291,7 +291,7 @@ func (s *Sync) ResetPrediction(frameNumber int64) {
 
 func (s *Sync) GetEvent(e *Event) bool {
 	if s.EventQueue.Size != 0 {
-		e = s.EventQueue.Front().(*Event)
+		e = (*s.EventQueue.Front()).(*Event)
 		s.EventQueue.Pop()
 		return true
 	}

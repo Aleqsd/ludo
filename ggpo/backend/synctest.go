@@ -82,7 +82,7 @@ func (s *SyncTestBackend) AddLocalInput(player ggponet.GGPOPlayerHandle, values 
 
 func (s *SyncTestBackend) SyncInput(values []byte, size int64, disconnectFlags *int64) {
 	if s.RollingBack {
-		var saved SavedInfo = s.SavedFrame.Front().(SavedInfo)
+		var saved *SavedInfo = (*s.SavedFrame.Front()).(*SavedInfo)
 		s.LastInput = saved.Input
 	} else {
 		if s.Sync.FrameCount == 0 {
@@ -110,7 +110,7 @@ func (s *SyncTestBackend) IncrementFrame() ggponet.GGPOErrorCode {
 	// Hold onto the current frame in our queue of saved states.  We'll need
 	// the checksum later to verify that our replay of the same frame got the
 	// same results.
-	var info SavedInfo
+	var info *SavedInfo
 	info.Frame = frame
 	info.Input = s.LastInput
 	info.Cbuf = s.Sync.GetLastSavedFrame().Cbuf
@@ -128,7 +128,7 @@ func (s *SyncTestBackend) IncrementFrame() ggponet.GGPOErrorCode {
 			s.Callbacks.AdvanceFrame(0)
 
 			// Verify that the checksumn of this frame is the same as the one in our list
-			info = s.SavedFrame.Front().(SavedInfo)
+			info = (*s.SavedFrame.Front()).(*SavedInfo)
 			s.SavedFrame.Pop()
 
 			if info.Frame != s.Sync.FrameCount {

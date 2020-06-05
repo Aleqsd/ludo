@@ -192,7 +192,7 @@ func (n *Netplay) SendPendingOutput() {
 		msg.Input.Bits = make([]byte, MAX_COMPRESSED_BITS)
 		bits = msg.Input.Bits
 
-		var input lib.GameInput = n.PendingOutput.Front().(lib.GameInput)
+		var input *lib.GameInput = (*n.PendingOutput.Front()).(*lib.GameInput)
 		msg.Input.StartFrame = input.Frame
 		msg.Input.InputSize = input.Size
 
@@ -431,9 +431,9 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 
 	// Get rid of our buffered input
 
-	for n.PendingOutput.Size > 0 && (n.PendingOutput.Front()).(lib.GameInput).Frame < msg.Input.AckFrame {
-		logrus.Info(fmt.Sprintf("Throwing away pending output frame %d\n", n.PendingOutput.Front().(lib.GameInput).Frame))
-		n.LastAckedInput = n.PendingOutput.Front().(lib.GameInput)
+	for n.PendingOutput.Size > 0 && (*n.PendingOutput.Front()).(lib.GameInput).Frame < msg.Input.AckFrame {
+		logrus.Info(fmt.Sprintf("Throwing away pending output frame %d\n", (*n.PendingOutput.Front()).(lib.GameInput).Frame))
+		n.LastAckedInput = (*n.PendingOutput.Front()).(lib.GameInput)
 		n.PendingOutput.Pop()
 	}
 	return true
@@ -441,9 +441,9 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 
 func (n *Netplay) OnInputAck(msg *NetplayMsgType) bool {
 	// Get rid of our buffered input
-	for n.PendingOutput.Size > 0 && (n.PendingOutput.Front()).(lib.GameInput).Frame < msg.InputAck.AckFrame {
-		logrus.Info(fmt.Sprintf("Throwing away pending output frame %d\n", n.PendingOutput.Front().(lib.GameInput).Frame))
-		n.LastAckedInput = n.PendingOutput.Front().(lib.GameInput)
+	for n.PendingOutput.Size > 0 && (*n.PendingOutput.Front()).(lib.GameInput).Frame < msg.InputAck.AckFrame {
+		logrus.Info(fmt.Sprintf("Throwing away pending output frame %d\n", (*n.PendingOutput.Front()).(lib.GameInput).Frame))
+		n.LastAckedInput = (*n.PendingOutput.Front()).(lib.GameInput)
 		n.PendingOutput.Pop()
 	}
 	return true
@@ -488,13 +488,13 @@ func (n *Netplay) RecommendFrameDelay() int64 {
 
 func (n *Netplay) PumpSendQueue() {
 	for !n.SendQueue.Empty() {
-		var entry QueueEntry = n.SendQueue.Front().(QueueEntry)
+		var entry *QueueEntry = (*n.SendQueue.Front()).(*QueueEntry)
 
 		if n.SendLatency > 0 {
 			// should really come up with a gaussian distributation based on the configured
 			// value, but this will do for now.
 			jitter := (n.SendLatency * 2 / 3) + ((rand.Int63() % n.SendLatency) / 3)
-			if platform.GetCurrentTimeMS() < (n.SendQueue.Front().(QueueEntry).QueueTime + uint64(jitter)) {
+			if platform.GetCurrentTimeMS() < ((*n.SendQueue.Front()).(QueueEntry).QueueTime + uint64(jitter)) {
 				break
 			}
 		}
@@ -529,7 +529,7 @@ func (n *Netplay) GetEvent(e *Event) bool {
 	if n.EventQueue.Size == 0 {
 		return false
 	}
-	e = n.EventQueue.Front().(*Event)
+	e = (*n.EventQueue.Front()).(*Event)
 	n.EventQueue.Pop()
 	return true
 }
