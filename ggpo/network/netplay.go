@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"log"
 	"math/rand"
 	"net"
 	"unsafe"
@@ -90,7 +89,7 @@ type Netplay struct {
 }
 
 func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []ggponet.ConnectStatus, poll *lib.Poll) {
-	n.LocalAddr, _ = net.ResolveUDPAddr("udp4", "127.0.0.1:8089")
+	n.LocalAddr, _ = net.ResolveUDPAddr("udp4", "127.0.0.1:8009")
 	n.RemoteAddr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", remotePlayer.IPAddress, int(remotePlayer.Port)))
 	n.Queue = queue
 	n.IsInitialized = false
@@ -147,7 +146,6 @@ func (n *Netplay) Write(msg *NetplayMsgType) {
 	if n.IsHosting {
 		_, err = n.Conn.WriteToUDP(buffer.Bytes(), n.RemoteAddr)
 	} else {
-		log.Println(string(buffer.Bytes()))
 		_, err = n.Conn.Write(buffer.Bytes())
 	}
 	if err != nil {
