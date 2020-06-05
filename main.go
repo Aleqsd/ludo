@@ -48,8 +48,8 @@ func runLoop(vid *video.Video, m *menu.Menu) {
 				now = netplay.GetCurrentTimeMS()
 				netplay.Idle()
 				if now >= next {
-				   netplay.RunFrame()
-				   next = now + (1000 / 60)
+					netplay.RunFrame()
+					next = now + (1000 / 60)
 				}
 
 				if state.Global.Core.FrameTimeCallback != nil {
@@ -96,7 +96,7 @@ func main() {
 	if len(args) > 0 {
 		gamePath = args[0]
 		for i := 1; i < len(args); i++ {
-			playersIP[i] = args[i]
+			playersIP[i-1] = args[i]
 		}
 	}
 

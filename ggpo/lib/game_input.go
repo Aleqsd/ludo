@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	GAMEINPUT_MAX_BYTES   = 9
+	GAMEINPUT_MAX_BYTES   = 20
 	GAMEINPUT_MAX_PLAYERS = 2
 	NULL_FRAME            = -1
 )
@@ -21,7 +21,7 @@ type GameInput struct {
 
 func (g *GameInput) Init(iframe int64, ibits []byte, isize int64, offset int64) {
 	if isize > GAMEINPUT_MAX_BYTES*GAMEINPUT_MAX_PLAYERS || isize == 0 {
-		logrus.Panic("Size Error")
+		logrus.Panic(fmt.Sprintf("Size Error, isize = %d", isize))
 	}
 	g.Frame = iframe
 	g.Size = isize
@@ -37,7 +37,7 @@ func (g *GameInput) Init(iframe int64, ibits []byte, isize int64, offset int64) 
 
 func (g *GameInput) SimpleInit(iframe int64, ibits []byte, isize int64) {
 	if isize > GAMEINPUT_MAX_BYTES*GAMEINPUT_MAX_PLAYERS || isize == 0 {
-		logrus.Panic("Size Error")
+		logrus.Panic(fmt.Sprintf("Size Error, isize = %d", isize))
 	}
 	g.Frame = iframe
 	g.Size = isize

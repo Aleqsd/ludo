@@ -286,7 +286,7 @@ func (n *Netplay) Disconnect() ggponet.GGPOErrorCode {
 
 func (n *Netplay) GetPeerConnectStatus(id int64, frame *int64) bool {
 	*frame = n.PeerConnectStatus[id].LastFrame
-   	return !n.PeerConnectStatus[id].Disconnected
+	return !n.PeerConnectStatus[id].Disconnected
 }
 
 func (n *Netplay) OnSyncRequest(msg *NetplayMsgType) bool {
@@ -542,7 +542,7 @@ func (n *Netplay) QueueEvent(e *Event) {
 
 func (n *Netplay) SendSyncRequest() {
 	n.NetplayState.Sync.Random = rand.Uint64() & 0xFFFF
-	var msg *NetplayMsgType
+	var msg *NetplayMsgType = new(NetplayMsgType)
 	msg.Init(SyncRequest)
 	msg.SyncRequest.RandomRequest = n.NetplayState.Sync.Random
 	n.SendMsg(msg)
@@ -552,7 +552,7 @@ func (n *Netplay) UpdateNetworkStats() {
 	now := platform.GetCurrentTimeMS()
 
 	if n.StatsStartTime == 0 {
-		n.StatsStartTime = now;
+		n.StatsStartTime = now
 	}
 
 	totalBytesSent := n.BytesSent + (UDP_HEADER_SIZE * n.PacketsSent)
@@ -562,7 +562,7 @@ func (n *Netplay) UpdateNetworkStats() {
 
 	n.KbpsSent = int64(Bps / 1024)
 
-	logrus.Info(fmt.Sprintf("Network Stats -- Bandwidth: %.2f KBps   Packets Sent: %5d (%.2f pps)\nKB Sent: %.2f    UDP Overhead: %.2f %%.\n", n.KbpsSent, n.PacketsSent, float64(n.PacketsSent * 1000 / int64(now - n.StatsStartTime)), totalBytesSent / 1024.0, udpOverhead))
+	logrus.Info(fmt.Sprintf("Network Stats -- Bandwidth: %d KBps   Packets Sent: %5d (%f pps)\nKB Sent: %d    UDP Overhead: %.2f %%.\n", n.KbpsSent, n.PacketsSent, float64(n.PacketsSent*1000/int64(now-n.StatsStartTime)), totalBytesSent/1024.0, udpOverhead))
 }
 
 func (n *Netplay) OnMsg(msg *NetplayMsgType) {
