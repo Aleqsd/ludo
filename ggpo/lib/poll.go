@@ -31,7 +31,7 @@ func (p *Poll) Pump() bool {
 	finished := false
 	var i int64
 	for i = 0; i < p.LoopSinks.Size; i++ {
-		var cb PollSinkCb = p.LoopSinks.Get(i).(PollSinkCb)
+		var cb *PollSinkCb = (*p.LoopSinks.Get(i)).(*PollSinkCb)
 		var s IPollSink = *cb.Sink
 		finished = !s.OnLoopPoll() || finished
 	}

@@ -5,7 +5,7 @@ import "github.com/sirupsen/logrus"
 type U interface{}
 
 type StaticBuffer struct {
-	Elements []U
+	Elements []*U
 	Size     int64
 	N        int64
 }
@@ -13,10 +13,10 @@ type StaticBuffer struct {
 func (r *StaticBuffer) Init(n int64) {
 	r.Size = 0
 	r.N = n
-	r.Elements = make([]U, r.N)
+	r.Elements = make([]*U, r.N)
 }
 
-func (r *StaticBuffer) Get(i int64) U {
+func (r *StaticBuffer) Get(i int64) *U {
 	if i < 0 || i > r.Size {
 		logrus.Panic("Assert error : get out of range in staticbuffer")
 	}
@@ -27,6 +27,6 @@ func (r *StaticBuffer) PushBack(u *U) {
 	if r.Size == r.N-1 {
 		logrus.Panic("Assert error : StaticBuffer size pushback")
 	}
-	r.Size++
 	r.Elements[r.Size] = u
+	r.Size++
 }
