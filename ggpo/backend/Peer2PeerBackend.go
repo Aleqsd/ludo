@@ -263,7 +263,7 @@ func (p *Peer2PeerBackend) PollNPlayers(currentFrame int64) int64 {
 }
 
 func (p *Peer2PeerBackend) PollNetplayEvents() {
-	var evt *network.Event
+	var evt *network.Event = new(network.Event)
 	evt.Init(network.EventUnknown)
 	for i := 0; i < int(p.NumPlayers); i++ {
 		for p.Endpoints[i].GetEvent(evt) {
