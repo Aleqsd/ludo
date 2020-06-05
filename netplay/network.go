@@ -166,10 +166,6 @@ func RunFrame() {
 			AdvanceFrame(inputs, disconnectFlags)
 		}
 	}
-
-	if result != ggponet.GGPO_OK {
-		logrus.Panic("Error during Network RunFrame")
-	}
 }
 
 func Idle() {
