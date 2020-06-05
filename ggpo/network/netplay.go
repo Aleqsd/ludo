@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"log"
 	"math/rand"
 	"net"
 	"unsafe"
@@ -146,6 +147,7 @@ func (n *Netplay) Write(msg *NetplayMsgType) {
 	if n.IsHosting {
 		_, err = n.Conn.WriteToUDP(buffer.Bytes(), n.RemoteAddr)
 	} else {
+		log.Println(string(buffer.Bytes()))
 		_, err = n.Conn.Write(buffer.Bytes())
 	}
 	if err != nil {

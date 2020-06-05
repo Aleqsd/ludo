@@ -37,7 +37,7 @@ type GGPOPlayer struct {
 	Type      GGPOPlayerType
 	PlayerNum int64
 	IPAddress string
-	Port      uint8
+	Port      uint64
 }
 
 type GGPOLocalEndpoint struct {

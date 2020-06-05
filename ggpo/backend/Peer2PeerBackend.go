@@ -137,7 +137,7 @@ func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
 	if !p.Sync.Rollingback {
 		p.Poll.Pump()
 
-		p.PollNetplayEvents() //TODO
+		p.PollNetplayEvents() //TODO:
 
 		if !p.Synchronizing {
 			p.Sync.CheckSimulation()
@@ -489,7 +489,7 @@ func (p *Peer2PeerBackend) PlayerHandleToQueue(player ggponet.GGPOPlayerHandle, 
 	return ggponet.GGPO_OK
 }
 
-func (p *Peer2PeerBackend) AddSpectator(ip string, port uint8) ggponet.GGPOErrorCode {
+func (p *Peer2PeerBackend) AddSpectator(ip string, port uint64) ggponet.GGPOErrorCode {
 	//TODO: Spectators
 	return ggponet.GGPO_OK
 }

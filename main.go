@@ -166,7 +166,7 @@ func InitNetwork(numPlayers int, playersIP []string) {
 		players[i].Type = ggponet.GGPO_PLAYERTYPE_REMOTE
 		players[i].IPAddress = strings.Split(playersIP[i], ":")[0]
 		port, err := strconv.Atoi(strings.Split(playersIP[i], ":")[1])
-		players[i].Port = uint8(port)
+		players[i].Port = uint64(port)
 		if err != nil {
 			logrus.Panic("Error in InitNetwork")
 		}

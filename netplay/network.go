@@ -60,7 +60,7 @@ func Init(numPlayers int64, players []ggponet.GGPOPlayer, numSpectators int64, t
 	}
 }
 
-func InitSpectator(numPlayers int64, hostIp string, hostPort uint8) {
+func InitSpectator(numPlayers int64, hostIp string, hostPort uint64) {
 	//TODO: Spectators
 	//var result ggponet.GGPOErrorCode
 
