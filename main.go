@@ -12,6 +12,7 @@ import (
 	"github.com/libretro/ludo/audio"
 	"github.com/libretro/ludo/core"
 	"github.com/libretro/ludo/ggpo/ggponet"
+	ggnetwork "github.com/libretro/ludo/ggpo/network"
 	"github.com/libretro/ludo/history"
 	"github.com/libretro/ludo/input"
 	"github.com/libretro/ludo/menu"
@@ -95,8 +96,11 @@ func main() {
 	var gamePath string
 	if len(args) > 0 {
 		gamePath = args[0]
-		for i := 1; i < len(args); i++ {
-			playersIP[i-1] = args[i]
+		if *numPlayers > 1 {
+			for i := 1; i < len(args) - 1; i++ {
+				playersIP[i-1] = args[i]
+			}
+			ggnetwork.LocalPort = args[len(args) - 1]
 		}
 	}
 
@@ -151,8 +155,8 @@ func main() {
 	core.Unload()
 }
 
-// ./ludo -n=2 -L cores/snes9x_libretro.dll C:/Users/a763716/Downloads/Street_Fighter_II_Turbo_U.smc local IP_REMOTE:8089
-// ./ludo -n=2 -L cores/snes9x_libretro.dll C:/Users/a763716/Downloads/Street_Fighter_II_Turbo_U.smc IP_REMOTE:8089 local
+// ./ludo -n=2 -L cores/snes9x_libretro.dll C:/Users/a763716/Downloads/Street_Fighter_II_Turbo_U.smc local 127.0.0.1:8090 8089
+// ./ludo -n=2 -L cores/snes9x_libretro.dll C:/Users/a763716/Downloads/Street_Fighter_II_Turbo_U.smc 127.0.0.1:8089 local 8090
 
 func InitNetwork(numPlayers int, playersIP []string) {
 	players := make([]ggponet.GGPOPlayer, ggponet.GGPO_MAX_SPECTATORS+ggponet.GGPO_MAX_PLAYERS)
