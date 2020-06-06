@@ -4,8 +4,6 @@
 package input
 
 import (
-	"log"
-
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/libretro/ludo/libretro"
 	ntf "github.com/libretro/ludo/notifications"
@@ -125,6 +123,7 @@ func keyboardToPlayer(st inputstate, p int) inputstate {
 	}
 	return st
 }
+
 /*
 func playerToNet(st inputstate, p int) {
 	netoutput := [20]byte{}
@@ -187,7 +186,6 @@ func getPressedReleased(new inputstate, old inputstate) (inputstate, inputstate)
 
 // Poll calculates the input state. It is meant to be called for each frame.
 func Poll() {
-	log.Println("poll")
 	NewState = reset(NewState)
 	NewState = pollJoypads(NewState)
 	NewState = pollKeyboard(NewState)
