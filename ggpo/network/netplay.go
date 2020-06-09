@@ -666,6 +666,7 @@ func (n *Netplay) OnLoopPoll() bool {
 		break
 
 	case Running:
+		logrus.Info("=> Case Running !")
 		// xxx: rig all this up with a timer wrapper
 		if n.NetplayState.Running.LastInputPacketRecvTime <= 0 || n.NetplayState.Running.LastInputPacketRecvTime+RUNNING_RETRY_INTERVAL < now {
 			logrus.Info(fmt.Sprintf("Haven't exchanged packets in a while (last received:%d  last sent:%d).  Resending.\n", n.LastReceivedInput.Frame, n.LastSentInput.Frame))

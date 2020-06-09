@@ -2,6 +2,7 @@ package ggpolog
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"runtime"
@@ -12,14 +13,14 @@ import (
 )
 
 func init() {
-
 	date := time.Now().Format("2006_01_02_15.04.05")
 
 	f, err := os.OpenFile("logs/ggpologfile_"+date+".log", os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
 		log.Println(err)
 	}
-	logrus.SetOutput(f)
+	mw := io.MultiWriter(os.Stdout, f)
+	logrus.SetOutput(mw)
 
 	logrus.SetReportCaller(true)
 	formatter := &logrus.TextFormatter{

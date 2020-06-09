@@ -11,6 +11,7 @@ import (
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/libretro/ludo/audio"
 	"github.com/libretro/ludo/core"
+	_ "github.com/libretro/ludo/ggpo/ggpolog"
 	"github.com/libretro/ludo/ggpo/ggponet"
 	ggnetwork "github.com/libretro/ludo/ggpo/network"
 	"github.com/libretro/ludo/history"
@@ -97,10 +98,10 @@ func main() {
 	if len(args) > 0 {
 		gamePath = args[0]
 		if *numPlayers > 1 {
-			for i := 1; i < len(args) - 1; i++ {
+			for i := 1; i < len(args)-1; i++ {
 				playersIP[i-1] = args[i]
 			}
-			ggnetwork.LocalPort = args[len(args) - 1]
+			ggnetwork.LocalPort = args[len(args)-1]
 		}
 	}
 
