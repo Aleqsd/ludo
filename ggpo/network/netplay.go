@@ -537,7 +537,7 @@ func (n *Netplay) GetEvent(e *Event) bool {
 
 func (n *Netplay) QueueEvent(e *Event) {
 	//LogEvent("Queuing event", evt)
-	var t lib.T = &e
+	var t lib.T = e
 	n.EventQueue.Push(&t)
 }
 
