@@ -157,7 +157,7 @@ func (n *Netplay) Write(msg *NetplayMsgType) {
 }
 
 func (n *Netplay) Read() {
-	var msg *NetplayMsgType
+	var msg *NetplayMsgType = new(NetplayMsgType)
 	for {
 		netinput := make([]byte, 4096)
 		length, _, err := n.Conn.ReadFromUDP(netinput)
@@ -258,7 +258,6 @@ func (n *Netplay) HostConnection() {
 		fmt.Println(err)
 		return
 	}
-	//defer n.Conn.Close()
 	n.IsInitialized = true
 	go n.Read()
 }
@@ -271,7 +270,6 @@ func (n *Netplay) JoinConnection() {
 		fmt.Println(err)
 		return
 	}
-	//defer n.Conn.Close()
 	n.IsInitialized = true
 	go n.Read()
 }
@@ -296,7 +294,7 @@ func (n *Netplay) OnSyncRequest(msg *NetplayMsgType) bool {
 		logrus.Info(fmt.Sprintf("Ignoring sync request from unknown endpoint (%d != %d).", msg.Hdr.Magic, n.RemoteMagicNumber))
 		return false
 	}
-	var reply *NetplayMsgType
+	var reply *NetplayMsgType = new(NetplayMsgType)
 	reply.Init(SyncReply)
 	reply.SyncReply.RandomReply = msg.SyncRequest.RandomRequest
 	n.SendMsg(reply)
