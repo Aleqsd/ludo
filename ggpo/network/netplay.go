@@ -244,6 +244,7 @@ func (n *Netplay) SendMsg(msg *NetplayMsgType) {
 
 	var queue QueueEntry
 	queue.Init(platform.GetCurrentTimeMS(), n.RemoteAddr, msg)
+	logrus.Info("SendMsg queue DestAddr : ", queue.DestAddr, " , MsgType : ", queue.Msg.Hdr.Type, " , QueueTime : ", queue.QueueTime)
 	var t lib.T = &queue
 	n.SendQueue.Push(&t)
 	n.PumpSendQueue()
