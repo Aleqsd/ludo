@@ -198,30 +198,36 @@ func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
 }
 
 func (p *Peer2PeerBackend) Poll2Players(currentFrame int64) int64 {
+	logrus.Info("Poll2Players Entered")
 	totalMinConfirmed := int64(lib.MAX_INT)
+	logrus.Info("Poll2Players int(p.NumPlayers) ", int(p.NumPlayers))
 	for i := 0; i < int(p.NumPlayers); i++ {
-		var ignore int64
-		queueConnected := p.Endpoints[i].GetPeerConnectStatus(int64(i), &ignore)
+		if int64(i) != p.LocalPlayerIndex {
+			logrus.Info("Poll2Players len(p.Endpoints[i].PeerConnectStatus) ", len(p.Endpoints[i].PeerConnectStatus))
+			var ignore int64
+			queueConnected := p.Endpoints[i].GetPeerConnectStatus(int64(i), &ignore)
 
-		if !p.LocalConnectStatus[i].Disconnected {
-			totalMinConfirmed = lib.MIN(p.LocalConnectStatus[i].LastFrame, totalMinConfirmed)
+			if !p.LocalConnectStatus[i].Disconnected {
+				totalMinConfirmed = lib.MIN(p.LocalConnectStatus[i].LastFrame, totalMinConfirmed)
+			}
+
+			logrus.Info(fmt.Sprintf("local endp: connected = %t, last_received = %d, totalMinConfirmed = %d.",
+				!p.LocalConnectStatus[i].Disconnected, p.LocalConnectStatus[i].LastFrame, totalMinConfirmed))
+
+			if !queueConnected && !p.LocalConnectStatus[i].Disconnected {
+				logrus.Info(fmt.Sprintf("disconnecting i %d by remote request.", i))
+				p.DisconnectPlayerQueue(int64(i), totalMinConfirmed)
+			}
+			logrus.Info(fmt.Sprintf("totalMinConfirmed = %d.\n", totalMinConfirmed))
 		}
-
-		logrus.Info(fmt.Sprintf("local endp: connected = %t, last_received = %d, totalMinConfirmed = %d.",
-			!p.LocalConnectStatus[i].Disconnected, p.LocalConnectStatus[i].LastFrame, totalMinConfirmed))
-
-		if !queueConnected && !p.LocalConnectStatus[i].Disconnected {
-			logrus.Info(fmt.Sprintf("disconnecting i %d by remote request.", i))
-			p.DisconnectPlayerQueue(int64(i), totalMinConfirmed)
-		}
-		logrus.Info(fmt.Sprintf("totalMinConfirmed = %d.\n", totalMinConfirmed))
 	}
 	return totalMinConfirmed
 }
 
 func (p *Peer2PeerBackend) PollNPlayers(currentFrame int64) int64 {
-	var lastReceived int64
+	logrus.Info("PollNPlayers Entered")
 
+	var lastReceived int64
 	// discard confirmed frames as appropriate
 	totalMinConfirmed := int64(lib.MAX_INT)
 	for queue := 0; queue < int(p.NumPlayers); queue++ {

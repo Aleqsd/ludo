@@ -266,7 +266,7 @@ func (s *Sync) CheckSimulationConsistency(seekTo *int64) bool {
 	firstIncorrect := NULL_FRAME
 	for i := 0; i < int(s.Config.NumPlayers); i++ {
 		incorrect := s.InputQueues[i].FirstIncorrectFrame
-		logrus.Info(fmt.Sprintf("considering incorrect frame %d reported by queue %d.", incorrect, i))
+		logrus.Info(fmt.Sprintf("Considering incorrect frame %d reported by queue %d.", incorrect, i))
 
 		if incorrect != NULL_FRAME && (firstIncorrect == NULL_FRAME || incorrect < int64(firstIncorrect)) {
 			firstIncorrect = int(incorrect)
@@ -274,7 +274,7 @@ func (s *Sync) CheckSimulationConsistency(seekTo *int64) bool {
 	}
 
 	if firstIncorrect == NULL_FRAME {
-		logrus.Info("prediction ok.  proceeding.")
+		logrus.Info("Prediction ok. Proceeding.")
 		return true
 	}
 	*seekTo = int64(firstIncorrect)
