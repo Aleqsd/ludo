@@ -258,7 +258,7 @@ func (n *Netplay) HostConnection() {
 		fmt.Println(err)
 		return
 	}
-	defer n.Conn.Close()
+	//defer n.Conn.Close()
 	n.IsInitialized = true
 	go n.Read()
 }
@@ -271,7 +271,7 @@ func (n *Netplay) JoinConnection() {
 		fmt.Println(err)
 		return
 	}
-	defer n.Conn.Close()
+	//defer n.Conn.Close()
 	n.IsInitialized = true
 	go n.Read()
 }
