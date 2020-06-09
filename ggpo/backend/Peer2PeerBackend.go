@@ -29,6 +29,7 @@ type Peer2PeerBackend struct {
 	NextRecommendedSleep  int64
 	DisconnectTimeout     int64
 	DisconnectNotifyStart int64
+	LocalPlayerIndex      int64
 	Synchronizing         bool
 	Callbacks             ggponet.GGPOSessionCallbacks
 }
@@ -278,6 +279,8 @@ func (p *Peer2PeerBackend) PollNetplayEvents() {
 }
 
 func (p *Peer2PeerBackend) OnNetplayPeerEvent(evt *network.Event, queue int64) {
+	logrus.Info("OnNetplayPeerEvent ====================<<<< ", evt.Type)
+
 	p.OnNetplayEvent(evt, p.QueueToPlayerHandle(queue))
 	switch evt.Type {
 	case network.EventInput:
@@ -308,6 +311,8 @@ func (p *Peer2PeerBackend) OnNetplaySpectatorEvent(evt *network.Event, queue int
 func (p *Peer2PeerBackend) OnNetplayEvent(evt *network.Event, handle ggponet.GGPOPlayerHandle) {
 	var info ggponet.GGPOEvent
 
+	logrus.Info("OnNetplayEvent ====================<<<< ", evt.Type)
+
 	switch evt.Type {
 	case network.EventConnected:
 		info.Code = ggponet.GGPO_EVENTCODE_CONNECTED_TO_PEER
@@ -324,6 +329,7 @@ func (p *Peer2PeerBackend) OnNetplayEvent(evt *network.Event, handle ggponet.GGP
 		break
 
 	case network.EventSynchronized:
+		logrus.Info("====================================== EventSynchronized")
 		info.Code = ggponet.GGPO_EVENTCODE_SYNCHRONIZED_WITH_PEER
 		info.Synchronized.Player = handle
 		p.Callbacks.OnEvent(&info)
@@ -360,6 +366,8 @@ func (p *Peer2PeerBackend) AddPlayer(player *ggponet.GGPOPlayer, handle *ggponet
 
 	if player.Type == ggponet.GGPO_PLAYERTYPE_REMOTE {
 		p.AddRemotePlayer(player, queue)
+	} else {
+		p.LocalPlayerIndex = queue
 	}
 
 	return ggponet.GGPO_OK
@@ -429,22 +437,28 @@ func (p *Peer2PeerBackend) DisconnectPlayerQueue(queue int64, syncto int64) {
 
 func (p *Peer2PeerBackend) CheckInitialSync() {
 	if p.Synchronizing {
+		logrus.Info("CheckInitialSync Sync FIRST")
 		// Check to see if everyone is now synchronized.  If so,
 		// go ahead and tell the client that we're ok to accept input.
 		for i := 0; i < int(p.NumPlayers); i++ {
-			if !p.LocalConnectStatus[i].Disconnected && !p.Endpoints[i].IsSynchronized() {
+			if !p.LocalConnectStatus[i].Disconnected && !p.Endpoints[i].IsSynchronized() && int64(i) != p.LocalPlayerIndex {
+				logrus.Info("CheckInitialSync 1ere boucle return")
+				logrus.Info("CheckInitialSync 1ere boucle return Disc ?", p.LocalConnectStatus[i].Disconnected)
+				logrus.Info("CheckInitialSync 1ere boucle return Sync ? ", p.Endpoints[i].IsSynchronized())
 				return
 			}
 		}
-		for i := 0; i < int(p.NumSpectators); i++ {
+		/*for i := 0; i < int(p.NumSpectators); i++ {
 			if !p.Spectators[i].IsSynchronized() {
+				logrus.Info("CheckInitialSync 2eme boucle return")
 				return
 			}
-		}
+		}*/
 
 		var info ggponet.GGPOEvent
 		info.Code = ggponet.GGPO_EVENTCODE_RUNNING
 		p.Callbacks.OnEvent(&info)
+		logrus.Info("CheckInitialSync Sync FALSE")
 		p.Synchronizing = false
 	}
 }

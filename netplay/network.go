@@ -155,10 +155,13 @@ func RunFrame() {
 		result = ggpo.AddLocalInput(ggpoSession, ngs.LocalPlayerHandle, input, int64(len(input)))
 	}
 
+	//logrus.Info("Result from RunFrame : ", result)
+
 	// synchronize these inputs with ggpo.  If we have enough input to proceed
 	// ggpo will modify the input list with the correct inputs to use and
 	// return 1.
 	if ggponet.GGPO_SUCCEEDED(result) {
+		logrus.Info("RunFrame Inputs : ", inputs)
 		result = ggpo.SynchronizeInput(ggpoSession, inputs, int64(local.ActionLast*ggponet.GGPO_MAX_PLAYERS), &disconnectFlags)
 		if ggponet.GGPO_SUCCEEDED(result) {
 			// inputs[0] and inputs[1] contain the inputs for p1 and p2.  Advance

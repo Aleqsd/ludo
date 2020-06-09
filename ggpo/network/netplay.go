@@ -274,6 +274,7 @@ func (n *Netplay) JoinConnection() {
 }
 
 func (n *Netplay) Disconnect() ggponet.GGPOErrorCode {
+	logrus.Info("CurrentState Disconnect !")
 	n.CurrentState = Disconnected
 	n.ShutDownTimeout = int64(platform.GetCurrentTimeMS()) + UDP_SHUTDOWN_TIMER
 	n.Conn.Close()
@@ -325,6 +326,7 @@ func (n *Netplay) OnSyncReply(msg *NetplayMsgType) bool {
 		var evt Event
 		evt.Init(EventSynchronized)
 		n.QueueEvent(&evt)
+		logrus.Info("CurrentState Running !")
 		n.CurrentState = Running
 		n.LastReceivedInput.Frame = -1
 		n.RemoteMagicNumber = msg.Hdr.Magic
@@ -341,6 +343,7 @@ func (n *Netplay) OnSyncReply(msg *NetplayMsgType) bool {
 
 func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 	// If a disconnect is requested, go ahead and disconnect now.
+	logrus.Info("====> OnInput")
 	disconnectRequested := msg.Input.DisconnectRequested
 	if disconnectRequested {
 		if n.CurrentState != Disconnected && !n.DisconnectEventSent {
@@ -529,13 +532,18 @@ func (n *Netplay) GetEvent(e *Event) bool {
 	if n.EventQueue.Size == 0 {
 		return false
 	}
-	e = (*n.EventQueue.Front()).(*Event)
+	//TODO: Refactor prore
+	e.Type = (*n.EventQueue.Front()).(*Event).Type
+	e.Synchronizing = (*n.EventQueue.Front()).(*Event).Synchronizing
+	e.Input = (*n.EventQueue.Front()).(*Event).Input
+	e.DisconnectTimeout = (*n.EventQueue.Front()).(*Event).DisconnectTimeout
+	logrus.Info("Getting event", e.Type)
 	n.EventQueue.Pop()
 	return true
 }
 
 func (n *Netplay) QueueEvent(e *Event) {
-	//LogEvent("Queuing event", evt)
+	logrus.Info("Queuing event", e.Type)
 	var t lib.T = e
 	n.EventQueue.Push(&t)
 }
@@ -554,7 +562,6 @@ func (n *Netplay) UpdateNetworkStats() {
 	if n.StatsStartTime == 0 {
 		n.StatsStartTime = now
 	}
-
 	totalBytesSent := n.BytesSent + (UDP_HEADER_SIZE * n.PacketsSent)
 	seconds := float64((now - n.StatsStartTime) / 1000.0)
 	Bps := float64(totalBytesSent) / seconds
@@ -580,9 +587,9 @@ func (n *Netplay) OnMsg(msg *NetplayMsgType) {
 
 		// filter out out-of-order packets
 		skipped := uint64(seq - n.NextRecvSeq)
-		logrus.Info(fmt.Sprintf("checking sequence number -> next - seq : %d - %d = %d\n", seq, n.NextRecvSeq, skipped))
+		logrus.Info(fmt.Sprintf("Checking sequence number -> next - seq : %d - %d = %d", seq, n.NextRecvSeq, skipped))
 		if skipped > MAX_SEQ_DISTANCE {
-			logrus.Info(fmt.Sprintf("dropping out of order packet (seq: %d, last seq:%d)\n", seq, n.NextRecvSeq))
+			logrus.Info(fmt.Sprintf("Dropping out of order packet (seq: %d, last seq:%d)", seq, n.NextRecvSeq))
 			return
 		}
 	}
@@ -628,12 +635,14 @@ func (n *Netplay) OnMsg(msg *NetplayMsgType) {
 }
 
 func (n *Netplay) Synchronize() {
+	logrus.Info("CurrentState Syncing !")
 	n.CurrentState = Syncing
 	n.NetplayState.Sync.RoundTripsRemaining = NUM_SYNC_PACKETS
 	n.SendSyncRequest()
 }
 
 func (n *Netplay) IsSynchronized() bool {
+	logrus.Info("IsSynchronized ? ", Running, n.CurrentState)
 	return n.CurrentState == Running
 }
 
@@ -668,7 +677,7 @@ func (n *Netplay) OnLoopPoll() bool {
 	case Running:
 		// xxx: rig all this up with a timer wrapper
 		if n.NetplayState.Running.LastInputPacketRecvTime <= 0 || n.NetplayState.Running.LastInputPacketRecvTime+RUNNING_RETRY_INTERVAL < now {
-			logrus.Info(fmt.Sprintf("Haven't exchanged packets in a while (last received:%d  last sent:%d).  Resending.\n", n.LastReceivedInput.Frame, n.LastSentInput.Frame))
+			logrus.Info(fmt.Sprintf("Haven't exchanged packets in a while (last received:%d  last sent:%d).  Resending.", n.LastReceivedInput.Frame, n.LastSentInput.Frame))
 			n.SendPendingOutput()
 			n.NetplayState.Running.LastInputPacketRecvTime = now
 		}
