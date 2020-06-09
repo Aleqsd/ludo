@@ -14,25 +14,23 @@ const (
 )
 
 type TimeSync struct {
-	Local          []int64
-	Remote         []int64
+	Local          [FRAME_WINDOW_SIZE]int64
+	Remote         [FRAME_WINDOW_SIZE]int64
 	LastInputs     [MIN_UNIQUE_FRAMES]GameInput
 	NextPrediction int64
 	Count          int64
 }
 
 func (t *TimeSync) Init() {
-	t.Local = make([]int64, FRAME_WINDOW_SIZE)
-	t.Remote = make([]int64, FRAME_WINDOW_SIZE)
 	t.NextPrediction = FRAME_WINDOW_SIZE * 3
 	t.Count = 0
 }
 
 func (t *TimeSync) AdvanceFrame(input *GameInput, advantage int64, radvantage int64) {
 	// Remember the last frame and frame advantage
-	t.LastInputs[input.Frame%int64(len(t.LastInputs))] = *input
-	t.Local[input.Frame%int64(len(t.Local))] = advantage
-	t.Remote[input.Frame%int64(len(t.Remote))] = radvantage
+	t.LastInputs[input.Frame%MIN_UNIQUE_FRAMES] = *input
+	t.Local[input.Frame%FRAME_WINDOW_SIZE] = advantage
+	t.Remote[input.Frame%FRAME_WINDOW_SIZE] = radvantage
 }
 
 func (t *TimeSync) RecommendFrameWaitDuration(requireIdleInput bool) int64 {
