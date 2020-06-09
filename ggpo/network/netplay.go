@@ -175,7 +175,7 @@ func (n *Netplay) Read() {
 func (n *Netplay) SendInput(input *lib.GameInput) {
 	if n.CurrentState == Running {
 		n.TimeSync.AdvanceFrame(input, n.LocalFrameAdvantage, n.RemoteFrameAdvantage)
-		var t lib.T = &input
+		var t lib.T = input
 		n.PendingOutput.Push(&t)
 	}
 	n.SendPendingOutput()
@@ -198,7 +198,7 @@ func (n *Netplay) SendPendingOutput() {
 		msg.Input.InputSize = input.Size
 
 		for j := int64(0); j < n.PendingOutput.Size; j++ {
-			current := n.PendingOutput.Item(j).(lib.GameInput)
+			current := (*n.PendingOutput.Item(j)).(*lib.GameInput)
 			if bytes.Compare(current.Bits, last.Bits) != 0 {
 				for i := int64(0); i < current.Size*8; i++ {
 					if current.Value(i) != last.Value(i) {
@@ -213,8 +213,8 @@ func (n *Netplay) SendPendingOutput() {
 				}
 			}
 			bitvector.ClearBit(msg.Input.Bits, &offset)
-			last = current
-			n.LastSentInput = current
+			last = *current
+			n.LastSentInput = *current
 		}
 	} else {
 		msg.Input.StartFrame = 0

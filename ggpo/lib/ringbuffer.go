@@ -27,7 +27,7 @@ func (r *RingBuffer) Front() *T {
 	return r.Elements[r.Tail]
 }
 
-func (r *RingBuffer) Item(i int64) T {
+func (r *RingBuffer) Item(i int64) *T {
 	if i >= r.Size {
 		logrus.Panic("Assert error ringbuffer size error")
 	}
