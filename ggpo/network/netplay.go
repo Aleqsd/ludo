@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
-	"unsafe"
 
 	"github.com/libretro/ludo/ggpo/bitvector"
 	"github.com/libretro/ludo/ggpo/ggponet"
@@ -354,7 +353,7 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 	} else {
 		// Update the peer connection status if this peer is still considered to be part of the network.
 		remoteStatus := msg.Input.PeerConnectStatus
-		for i := 0; i < int(unsafe.Sizeof(n.PeerConnectStatus)); i++ {
+		for i := 0; i < len(remoteStatus); i++ {
 			if remoteStatus[i].LastFrame < n.PeerConnectStatus[i].LastFrame {
 				logrus.Panic("Assert error remotestatus Lastframe")
 			}
