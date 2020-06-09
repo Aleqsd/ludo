@@ -297,6 +297,7 @@ func (n *Netplay) OnSyncRequest(msg *NetplayMsgType) bool {
 		return false
 	}
 	var reply *NetplayMsgType
+	reply.Init(SyncReply)
 	reply.SyncReply.RandomReply = msg.SyncRequest.RandomRequest
 	n.SendMsg(reply)
 	return true
