@@ -183,7 +183,7 @@ func (n *Netplay) SendInput(input *lib.GameInput) {
 }
 
 func (n *Netplay) SendPendingOutput() {
-	var msg *NetplayMsgType
+	var msg *NetplayMsgType = new(NetplayMsgType)
 	msg.Init(Input)
 	offset := int64(0)
 	var bits []byte
@@ -452,7 +452,7 @@ func (n *Netplay) OnInputAck(msg *NetplayMsgType) bool {
 
 func (n *Netplay) OnQualityReport(msg *NetplayMsgType) bool {
 	// send a reply so the other side can compute the round trip transmit time.
-	var reply *NetplayMsgType
+	var reply *NetplayMsgType = new(NetplayMsgType)
 	reply.Init(QualityReply)
 	reply.QualityReply.Pong = msg.QualityReport.Ping
 	n.SendMsg(reply)
@@ -674,7 +674,7 @@ func (n *Netplay) OnLoopPoll() bool {
 		}
 
 		if n.NetplayState.Running.LastQualityReportTime <= 0 || n.NetplayState.Running.LastQualityReportTime+QUALITY_REPORT_INTERVAL < now {
-			var msg *NetplayMsgType
+			var msg *NetplayMsgType = new(NetplayMsgType)
 			msg.Init(QualityReport)
 			msg.QualityReport.Ping = int64(platform.GetCurrentTimeMS())
 			msg.QualityReport.FrameAdvantage = n.LocalFrameAdvantage
@@ -689,7 +689,7 @@ func (n *Netplay) OnLoopPoll() bool {
 
 		if n.LastSendTime > 0 && n.LastSendTime+KEEP_ALIVE_INTERVAL < now {
 			logrus.Info("Sending keep alive packet\n")
-			var msg *NetplayMsgType
+			var msg *NetplayMsgType = new(NetplayMsgType)
 			msg.Init(KeepAlive)
 			n.SendMsg(msg)
 		}
