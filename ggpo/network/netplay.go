@@ -151,7 +151,7 @@ func (n *Netplay) Write(msg *NetplayMsgType) {
 		_, err = n.Conn.Write(buffer.Bytes())
 	}
 	if err != nil {
-		fmt.Println(err)
+		logrus.Error("Netplay Write Error : ", err)
 		return
 	}
 }
@@ -162,7 +162,7 @@ func (n *Netplay) Read() {
 		netinput := make([]byte, 4096)
 		length, _, err := n.Conn.ReadFromUDP(netinput)
 		if err != nil {
-			fmt.Println(err)
+			logrus.Error("Netplay Read Error : ", err)
 			return
 		}
 		buffer := bytes.NewBuffer(netinput[:length])
@@ -255,7 +255,7 @@ func (n *Netplay) HostConnection() {
 	var err error
 	n.Conn, err = net.ListenUDP("udp4", n.LocalAddr)
 	if err != nil {
-		fmt.Println(err)
+		logrus.Error("HostConnection Error : ", err)
 		return
 	}
 	n.IsInitialized = true
@@ -267,7 +267,7 @@ func (n *Netplay) JoinConnection() {
 	var err error
 	n.Conn, err = net.DialUDP("udp4", n.LocalAddr, n.RemoteAddr)
 	if err != nil {
-		fmt.Println(err)
+		logrus.Error("JoinConnection Error : ", err)
 		return
 	}
 	n.IsInitialized = true
@@ -563,7 +563,9 @@ func (n *Netplay) UpdateNetworkStats() {
 
 	n.KbpsSent = int64(Bps / 1024)
 
-	logrus.Info(fmt.Sprintf("Network Stats -- Bandwidth: %d KBps   Packets Sent: %5d (%f pps)\nKB Sent: %d    UDP Overhead: %.2f %%.\n", n.KbpsSent, n.PacketsSent, float64(n.PacketsSent*1000/int64(now-n.StatsStartTime)), totalBytesSent/1024.0, udpOverhead))
+	if n.StatsStartTime != now {
+		logrus.Info(fmt.Sprintf("Network Stats -- Bandwidth: %d KBps   Packets Sent: %5d (%f pps)\nKB Sent: %d    UDP Overhead: %.2f %%.\n", n.KbpsSent, n.PacketsSent, float64(n.PacketsSent*1000/int64(now-n.StatsStartTime)), totalBytesSent/1024.0, udpOverhead))
+	}
 }
 
 func (n *Netplay) OnMsg(msg *NetplayMsgType) {
@@ -665,7 +667,6 @@ func (n *Netplay) OnLoopPoll() bool {
 		break
 
 	case Running:
-		logrus.Info("=> Case Running !")
 		// xxx: rig all this up with a timer wrapper
 		if n.NetplayState.Running.LastInputPacketRecvTime <= 0 || n.NetplayState.Running.LastInputPacketRecvTime+RUNNING_RETRY_INTERVAL < now {
 			logrus.Info(fmt.Sprintf("Haven't exchanged packets in a while (last received:%d  last sent:%d).  Resending.\n", n.LastReceivedInput.Frame, n.LastSentInput.Frame))
