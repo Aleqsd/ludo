@@ -111,7 +111,9 @@ func (p *Peer2PeerBackend) AddLocalInput(player ggponet.GGPOPlayerHandle, values
 
 		// Send the input to all the remote players.
 		for i := 0; i < int(p.NumPlayers); i++ {
-			p.Endpoints[i].SendInput(&input)
+			if int64(i) != p.LocalPlayerIndex {
+				p.Endpoints[i].SendInput(&input)
+			}
 		}
 	}
 
