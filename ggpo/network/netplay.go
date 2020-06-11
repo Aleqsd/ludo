@@ -439,7 +439,7 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 
 	// Get rid of our buffered input
 
-	for n.PendingOutput.Size > 0 && (*n.PendingOutput.Front()).(lib.GameInput).Frame < msg.Input.AckFrame {
+	for n.PendingOutput.Size > 0 && (*n.PendingOutput.Front()).(*lib.GameInput).Frame < msg.Input.AckFrame {
 		logrus.Info(fmt.Sprintf("Throwing away pending output frame %d\n", (*n.PendingOutput.Front()).(lib.GameInput).Frame))
 		n.LastAckedInput = (*n.PendingOutput.Front()).(lib.GameInput)
 		n.PendingOutput.Pop()

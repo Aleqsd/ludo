@@ -127,7 +127,7 @@ func (s *Sync) GetConfirmedInputs(values []byte, size int64, frame int64) int64 
 func (s *Sync) SynchronizeInputs(values []byte, size int64) int64 {
 	var disconnectedFlags int64 = 0
 	output := values
-	logrus.Info(" ================================================================= SynchronizeInputs Inputs : ", output)
+	logrus.Info("SynchronizeInputs Inputs : ", output)
 
 	if size < s.Config.NumPlayers*s.Config.InputSize {
 		logrus.Panic("Assert error size")
@@ -144,7 +144,7 @@ func (s *Sync) SynchronizeInputs(values []byte, size int64) int64 {
 		}
 		output = make([]byte, len(input.Bits)*i+len(output))
 		output = input.Bits
-		logrus.Info(" ================================================================= SynchronizeInputs Output : ", output)
+		logrus.Info("SynchronizeInputs Output : ", output)
 	}
 	return disconnectedFlags
 }

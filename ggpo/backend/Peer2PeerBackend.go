@@ -287,8 +287,7 @@ func (p *Peer2PeerBackend) PollNetplayEvents() {
 }
 
 func (p *Peer2PeerBackend) OnNetplayPeerEvent(evt *network.Event, queue int64) {
-	logrus.Info("OnNetplayPeerEvent ====================<<<< ", evt.Type)
-
+	logrus.Info("OnNetplayPeerEvent ", evt.Type)
 	p.OnNetplayEvent(evt, p.QueueToPlayerHandle(queue))
 	switch evt.Type {
 	case network.EventInput:
@@ -319,7 +318,7 @@ func (p *Peer2PeerBackend) OnNetplaySpectatorEvent(evt *network.Event, queue int
 func (p *Peer2PeerBackend) OnNetplayEvent(evt *network.Event, handle ggponet.GGPOPlayerHandle) {
 	var info ggponet.GGPOEvent
 
-	logrus.Info("OnNetplayEvent ====================<<<< ", evt.Type)
+	logrus.Info("OnNetplayEvent ", evt.Type)
 
 	switch evt.Type {
 	case network.EventConnected:
@@ -337,7 +336,7 @@ func (p *Peer2PeerBackend) OnNetplayEvent(evt *network.Event, handle ggponet.GGP
 		break
 
 	case network.EventSynchronized:
-		logrus.Info("====================================== EventSynchronized")
+		logrus.Info("EventSynchronized")
 		info.Code = ggponet.GGPO_EVENTCODE_SYNCHRONIZED_WITH_PEER
 		info.Synchronized.Player = handle
 		p.Callbacks.OnEvent(&info)
