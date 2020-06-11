@@ -158,10 +158,11 @@ func (n *Netplay) Write(msg *NetplayMsgType) {
 func (n *Netplay) Read() {
 	var msg *NetplayMsgType = new(NetplayMsgType)
 	for {
-		netinput := make([]byte, 4096)
+		netinput := make([]byte, 8192)
 		length, _, err := n.Conn.ReadFromUDP(netinput)
 		if err != nil {
 			logrus.Error("Netplay Read Error : ", err)
+			logrus.Error("Netplay Length : ", length)
 			return
 		}
 		buffer := bytes.NewBuffer(netinput[:length])
@@ -251,6 +252,7 @@ func (n *Netplay) SendMsg(msg *NetplayMsgType) {
 }
 
 func (n *Netplay) HostConnection() {
+	logrus.Info("Netplay HostConnection")
 	n.IsHosting = true
 	var err error
 	n.Conn, err = net.ListenUDP("udp4", n.LocalAddr)
@@ -263,6 +265,7 @@ func (n *Netplay) HostConnection() {
 }
 
 func (n *Netplay) JoinConnection() {
+	logrus.Info("Netplay JoinConnection")
 	n.IsHosting = false
 	var err error
 	n.Conn, err = net.DialUDP("udp4", n.LocalAddr, n.RemoteAddr)
