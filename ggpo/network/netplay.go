@@ -348,7 +348,7 @@ func (n *Netplay) OnSyncReply(msg *NetplayMsgType) bool {
 
 func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 	// If a disconnect is requested, go ahead and disconnect now.
-	logrus.Info("====> OnInput")
+	logrus.Info("Entering OnInput")
 	disconnectRequested := msg.Input.DisconnectRequested
 	if disconnectRequested {
 		if n.CurrentState != Disconnected && !n.DisconnectEventSent {
@@ -391,7 +391,7 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 			 */
 
 			if currentFrame > n.LastReceivedInput.Frame+1 {
-				logrus.Panic("Assert error currentframe")
+				logrus.Panic("Assert error currentframe : ", currentFrame, " > n.LastReceivedInput.Frame+1 : ", n.LastReceivedInput.Frame+1)
 			}
 			var useInputs bool = currentFrame == n.LastReceivedInput.Frame+1
 
@@ -414,7 +414,7 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 			if useInputs {
 				// Move forward 1 frame in the stream.
 				if currentFrame != n.LastReceivedInput.Frame+1 {
-					logrus.Panic("Assert error currentFrame")
+					logrus.Panic("Assert error currentframe : ", currentFrame, " != n.LastReceivedInput.Frame+1 : ", n.LastReceivedInput.Frame+1)
 				}
 
 				// Send the event to the emualtor
@@ -440,17 +440,18 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 	// Get rid of our buffered input
 
 	for n.PendingOutput.Size > 0 && (*n.PendingOutput.Front()).(*lib.GameInput).Frame < msg.Input.AckFrame {
-		logrus.Info(fmt.Sprintf("Throwing away pending output frame %d\n", (*n.PendingOutput.Front()).(lib.GameInput).Frame))
+		logrus.Info(fmt.Sprintf("Throwing away pending output frame %d", (*n.PendingOutput.Front()).(lib.GameInput).Frame))
 		n.LastAckedInput = (*n.PendingOutput.Front()).(lib.GameInput)
 		n.PendingOutput.Pop()
 	}
+	logrus.Info("Exiting OnInput")
 	return true
 }
 
 func (n *Netplay) OnInputAck(msg *NetplayMsgType) bool {
 	// Get rid of our buffered input
 	for n.PendingOutput.Size > 0 && (*n.PendingOutput.Front()).(lib.GameInput).Frame < msg.InputAck.AckFrame {
-		logrus.Info(fmt.Sprintf("Throwing away pending output frame %d\n", (*n.PendingOutput.Front()).(lib.GameInput).Frame))
+		logrus.Info(fmt.Sprintf("Throwing away pending output frame %d", (*n.PendingOutput.Front()).(lib.GameInput).Frame))
 		n.LastAckedInput = (*n.PendingOutput.Front()).(lib.GameInput)
 		n.PendingOutput.Pop()
 	}
@@ -537,7 +538,6 @@ func (n *Netplay) GetEvent(e *Event) bool {
 	if n.EventQueue.Size == 0 {
 		return false
 	}
-	//TODO: Refactor prore
 	e.Type = (*n.EventQueue.Front()).(*Event).Type
 	e.Synchronizing = (*n.EventQueue.Front()).(*Event).Synchronizing
 	e.Input = (*n.EventQueue.Front()).(*Event).Input
@@ -575,7 +575,7 @@ func (n *Netplay) UpdateNetworkStats() {
 	n.KbpsSent = int64(Bps / 1024)
 
 	if n.StatsStartTime != now {
-		logrus.Info(fmt.Sprintf("Network Stats -- Bandwidth: %d KBps   Packets Sent: %5d (%f pps)\nKB Sent: %d    UDP Overhead: %.2f %%.\n", n.KbpsSent, n.PacketsSent, float64(n.PacketsSent*1000/int64(now-n.StatsStartTime)), totalBytesSent/1024.0, udpOverhead))
+		logrus.Info(fmt.Sprintf("Network Stats -- Bandwidth: %d KBps, Packets Sent: %5d (%f pps), KB Sent: %d, UDP Overhead: %.2f %%.", n.KbpsSent, n.PacketsSent, float64(n.PacketsSent*1000/int64(now-n.StatsStartTime)), totalBytesSent/1024.0, udpOverhead))
 	}
 }
 
@@ -647,7 +647,6 @@ func (n *Netplay) Synchronize() {
 }
 
 func (n *Netplay) IsSynchronized() bool {
-	logrus.Info("IsSynchronized ? ", Running, n.CurrentState)
 	return n.CurrentState == Running
 }
 
@@ -674,7 +673,7 @@ func (n *Netplay) OnLoopPoll() bool {
 			nextInterval = SYNC_RETRY_INTERVAL
 		}
 		if n.LastSendTime > 0 && n.LastSendTime+nextInterval < now {
-			logrus.Info(fmt.Sprintf("No luck syncing after %d ms... Re-queueing sync packet.\n", nextInterval))
+			logrus.Info(fmt.Sprintf("No luck syncing after %d ms... Re-queueing sync packet.", nextInterval))
 			n.SendSyncRequest()
 		}
 		break
@@ -702,14 +701,14 @@ func (n *Netplay) OnLoopPoll() bool {
 		}
 
 		if n.LastSendTime > 0 && n.LastSendTime+KEEP_ALIVE_INTERVAL < now {
-			logrus.Info("Sending keep alive packet\n")
+			logrus.Info("Sending keep alive packet")
 			var msg *NetplayMsgType = new(NetplayMsgType)
 			msg.Init(KeepAlive)
 			n.SendMsg(msg)
 		}
 
 		if n.DisconnectTimeout > 0 && n.DisconnectNotifyStart > 0 && !n.DisconnectNotifySent && (n.LastRecvTime+uint64(n.DisconnectNotifyStart) < now) {
-			logrus.Info(fmt.Sprintf("Endpoint has stopped receiving packets for %d ms.  Sending notification.\n", n.DisconnectNotifyStart))
+			logrus.Info(fmt.Sprintf("Endpoint has stopped receiving packets for %d ms. Sending notification.", n.DisconnectNotifyStart))
 			var evt Event
 			evt.Init(EventNetworkInterrupted)
 			evt.DisconnectTimeout = n.DisconnectTimeout - n.DisconnectNotifyStart
@@ -719,7 +718,7 @@ func (n *Netplay) OnLoopPoll() bool {
 
 		if n.DisconnectTimeout > 0 && (n.LastRecvTime+uint64(n.DisconnectTimeout) < now) {
 			if !n.DisconnectEventSent {
-				logrus.Info(fmt.Sprintf("Endpoint has stopped receiving packets for %d ms.  Disconnecting.\n", n.DisconnectTimeout))
+				logrus.Info(fmt.Sprintf("Endpoint has stopped receiving packets for %d ms. Disconnecting.", n.DisconnectTimeout))
 				var evt Event
 				evt.Init(EventDisconnected)
 				n.QueueEvent(&evt)
@@ -730,11 +729,10 @@ func (n *Netplay) OnLoopPoll() bool {
 
 	case Disconnected:
 		if n.ShutDownTimeout < int64(now) {
-			logrus.Info("Shutting down udp connection.\n")
+			logrus.Info("Shutting down udp connection.")
 			n.ShutDownTimeout = 0
 		}
 
 	}
-
 	return true
 }

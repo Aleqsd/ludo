@@ -88,7 +88,7 @@ func (s *Sync) AddLocalInput(queue int64, input *GameInput) bool {
 		s.SaveCurrentFrame()
 	}
 
-	logrus.Info(fmt.Sprintf("Sending undelayed local frame %d to queue %d.\n", s.FrameCount, queue))
+	logrus.Info(fmt.Sprintf("Sending undelayed local frame %d to queue %d", s.FrameCount, queue))
 	input.Frame = s.FrameCount
 	s.InputQueues[queue].AddInput(input)
 
@@ -200,7 +200,7 @@ func (s *Sync) LoadFrame(frame int64) {
 	s.SavedState.Head = s.FindSavedFrameIndex(frame)
 	var state *SavedFrame = &s.SavedState.Frames[s.SavedState.Head]
 
-	logrus.Info(fmt.Sprintf("=== Loading frame info %d (size: %d  checksum: %08x).\n",
+	logrus.Info(fmt.Sprintf("Loading frame info %d (size: %d  checksum: %08x).",
 		state.Frame, state.Cbuf, state.Checksum))
 
 	s.Callbacks.LoadGameState(state.Buf, state.Cbuf)
@@ -225,7 +225,7 @@ func (s *Sync) SaveCurrentFrame() {
 	state.Frame = s.FrameCount
 	s.Callbacks.SaveGameState(&state.Buf, &state.Cbuf, &state.Checksum, state.Frame)
 
-	logrus.Info(fmt.Sprintf("=== Saved frame info %d (size: %d  checksum: %08x).\n",
+	logrus.Info(fmt.Sprintf("Saved frame info %d (size: %d  checksum: %08x).",
 		state.Frame, state.Cbuf, state.Checksum))
 
 	s.SavedState.Head = (s.SavedState.Head + 1) % int64(len(s.SavedState.Frames))

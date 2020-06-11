@@ -175,7 +175,7 @@ func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
 						p.NextSpectatorFrame++
 					}
 				}
-				logrus.Info(fmt.Sprintf("setting confirmed frame in sync to %d.\n", totalMinConfirmed))
+				logrus.Info(fmt.Sprintf("setting confirmed frame in sync to %d.", totalMinConfirmed))
 				p.Sync.SetLastConfirmedFrame(totalMinConfirmed)
 			}
 
@@ -220,7 +220,7 @@ func (p *Peer2PeerBackend) Poll2Players(currentFrame int64) int64 {
 				logrus.Info(fmt.Sprintf("disconnecting i %d by remote request.", i))
 				p.DisconnectPlayerQueue(int64(i), totalMinConfirmed)
 			}
-			logrus.Info(fmt.Sprintf("totalMinConfirmed = %d.\n", totalMinConfirmed))
+			logrus.Info(fmt.Sprintf("totalMinConfirmed = %d.", totalMinConfirmed))
 		}
 	}
 	return totalMinConfirmed
@@ -300,7 +300,7 @@ func (p *Peer2PeerBackend) OnNetplayPeerEvent(evt *network.Event, queue int64) {
 
 			p.Sync.AddRemoteInput(queue, &evt.Input)
 			// Notify the other endpoints which frame we received from a peer
-			logrus.Info(fmt.Sprintf("setting remote connect status for queue %d to %d\n", queue, evt.Input.Frame))
+			logrus.Info(fmt.Sprintf("setting remote connect status for queue %d to %d", queue, evt.Input.Frame))
 			p.LocalConnectStatus[queue].LastFrame = evt.Input.Frame
 		}
 		break
@@ -444,14 +444,10 @@ func (p *Peer2PeerBackend) DisconnectPlayerQueue(queue int64, syncto int64) {
 
 func (p *Peer2PeerBackend) CheckInitialSync() {
 	if p.Synchronizing {
-		logrus.Info("CheckInitialSync Sync FIRST")
 		// Check to see if everyone is now synchronized.  If so,
 		// go ahead and tell the client that we're ok to accept input.
 		for i := 0; i < int(p.NumPlayers); i++ {
 			if !p.LocalConnectStatus[i].Disconnected && !p.Endpoints[i].IsSynchronized() && int64(i) != p.LocalPlayerIndex {
-				logrus.Info("CheckInitialSync 1ere boucle return")
-				logrus.Info("CheckInitialSync 1ere boucle return Disc ?", p.LocalConnectStatus[i].Disconnected)
-				logrus.Info("CheckInitialSync 1ere boucle return Sync ? ", p.Endpoints[i].IsSynchronized())
 				return
 			}
 		}
@@ -465,7 +461,6 @@ func (p *Peer2PeerBackend) CheckInitialSync() {
 		var info ggponet.GGPOEvent
 		info.Code = ggponet.GGPO_EVENTCODE_RUNNING
 		p.Callbacks.OnEvent(&info)
-		logrus.Info("CheckInitialSync Sync FALSE")
 		p.Synchronizing = false
 	}
 }
