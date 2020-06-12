@@ -68,11 +68,11 @@ func (g *GameInput) Equal(other GameInput, bitsonly bool) bool {
 }
 
 func (g *GameInput) Set(i int64) {
-	g.Bits[i/8] |= (1 << (i % 8))
+	g.Bits[i/8%(GAMEINPUT_MAX_BYTES*GAMEINPUT_MAX_PLAYERS)] |= (1 << (i % 8))
 }
 
 func (g *GameInput) Clear(i int64) {
-	g.Bits[i/8] &= ^(1 << (i % 8))
+	g.Bits[i/8%(GAMEINPUT_MAX_BYTES*GAMEINPUT_MAX_PLAYERS)] &= ^(1 << (i % 8))
 }
 
 func (g *GameInput) Erase() {
@@ -80,5 +80,5 @@ func (g *GameInput) Erase() {
 }
 
 func (g *GameInput) Value(i int64) bool {
-	return (g.Bits[i/8] & (1 << (i % 8))) != 0
+	return (g.Bits[i/8%(GAMEINPUT_MAX_BYTES*GAMEINPUT_MAX_PLAYERS)] & (1 << (i % 8))) != 0
 }

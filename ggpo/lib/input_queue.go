@@ -149,7 +149,7 @@ func (i *InputQueue) GetInput(requestedFrame int64, input *GameInput) bool {
 	i.LastFrameRequested = requestedFrame
 
 	if requestedFrame < i.Inputs[i.Tail].Frame {
-		logrus.Panic("Assert Error on requestedFrame")
+		logrus.Panic("Assert Error requestedFrame : ", requestedFrame, " < i.LastFrameRequested : ", i.LastFrameRequested)
 	}
 
 	if i.Prediction.Frame == NULL_FRAME {

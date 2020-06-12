@@ -1,6 +1,6 @@
 package bitvector
 
-const BITVECTOR_NIBBLE_SIZE = 8
+const BITVECTOR_NIBBLE_SIZE = 9
 
 func SetBit(vector []byte, offset *int64) {
 	vector[(*offset)/8] |= (1 << ((*offset) % 8))

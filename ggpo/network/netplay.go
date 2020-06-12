@@ -198,10 +198,19 @@ func (n *Netplay) SendPendingOutput() {
 		msg.Input.StartFrame = input.Frame
 		msg.Input.InputSize = input.Size
 
+		if last.Frame != -1 && last.Frame+1 != msg.Input.StartFrame {
+			logrus.Panic("Assert Error last.Frame != -1 && last.Frame+1 != msg.Input.StartFrame. last.Frame = ", last.Frame, " msg.Input.StartFrame = ", msg.Input.StartFrame)
+		}
 		for j := int64(0); j < n.PendingOutput.Size; j++ {
 			current := (*n.PendingOutput.Item(j)).(*lib.GameInput)
 			if bytes.Compare(current.Bits, last.Bits) != 0 {
+				if (lib.GAMEINPUT_MAX_BYTES * lib.GAMEINPUT_MAX_PLAYERS * 8) >= (1 << bitvector.BITVECTOR_NIBBLE_SIZE) {
+					logrus.Panic("Assert Error (lib.GAMEINPUT_MAX_BYTES * lib.GAMEINPUT_MAX_PLAYERS * 8) >= (1 << bitvector.BITVECTOR_NIBBLE_SIZE)")
+				}
 				for i := int64(0); i < current.Size*8; i++ {
+					if i >= (1 << bitvector.BITVECTOR_NIBBLE_SIZE) {
+						logrus.Panic("Assert Error i >= (1 << bitvector.BITVECTOR_NIBBLE_SIZE)")
+					}
 					if current.Value(i) != last.Value(i) {
 						bitvector.SetBit(msg.Input.Bits, &offset)
 						if current.Value(i) {
@@ -400,6 +409,7 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 				button := bitvector.ReadNibblet(bits, &offset)
 				if useInputs {
 					if on > 0 {
+						logrus.Info("Button : ", bits)
 						n.LastReceivedInput.Set(button)
 					} else {
 						n.LastReceivedInput.Clear(button)
