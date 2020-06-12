@@ -416,6 +416,7 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 				if currentFrame != n.LastReceivedInput.Frame+1 {
 					logrus.Panic("Assert error currentframe : ", currentFrame, " != n.LastReceivedInput.Frame+1 : ", n.LastReceivedInput.Frame+1)
 				}
+				n.LastReceivedInput.Frame = currentFrame
 
 				// Send the event to the emualtor
 				var evt Event
