@@ -156,8 +156,8 @@ func main() {
 	core.Unload()
 }
 
-// ./ludo -n=2 -L cores/snes9x_libretro.dll C:/Users/a763716/Downloads/Street_Fighter_II_Turbo_U.smc local 127.0.0.1:8090 8089
-// ./ludo -n=2 -L cores/snes9x_libretro.dll C:/Users/a763716/Downloads/Street_Fighter_II_Turbo_U.smc 127.0.0.1:8089 local 8090
+// ./ludo -n=2 -L cores/snes9x_libretro.dll B:/Downloads/Street_Fighter_II_Turbo_U.smc local 127.0.0.1:8090 8089
+// ./ludo -n=2 -L cores/snes9x_libretro.dll B:/Downloads/Street_Fighter_II_Turbo_U.smc 127.0.0.1:8089 local 8090
 
 func InitNetwork(numPlayers int, playersIP []string) {
 	players := make([]ggponet.GGPOPlayer, ggponet.GGPO_MAX_SPECTATORS+ggponet.GGPO_MAX_PLAYERS)
