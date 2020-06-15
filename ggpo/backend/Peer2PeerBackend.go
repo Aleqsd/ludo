@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/libretro/ludo/ggpo/ggponet"
@@ -128,7 +129,12 @@ func (p *Peer2PeerBackend) SyncInput(values []byte, size int64, disconnectFlags 
 		return ggponet.GGPO_ERRORCODE_NOT_SYNCHRONIZED
 	}
 
+	diff := make([]byte, size)
+
 	flags = p.Sync.SynchronizeInputs(values, size)
+	if bytes.Compare(diff, values) != 0 {
+		logrus.Info("Values after : ", values, " diff : ", diff)
+	}
 	if *disconnectFlags != 0 {
 		*disconnectFlags = flags
 	}

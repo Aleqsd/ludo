@@ -405,7 +405,7 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 				button := bitvector.ReadNibblet(bits, &offset)
 				if useInputs {
 					if on > 0 {
-						logrus.Info("Button : ", bits)
+						logrus.Info("Button : ", bits) //TODO: Temporary Fix %
 						n.LastReceivedInput.Set(button)
 					} else {
 						n.LastReceivedInput.Clear(button)

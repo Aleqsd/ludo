@@ -126,14 +126,12 @@ func (s *Sync) GetConfirmedInputs(values []byte, size int64, frame int64) int64 
 
 func (s *Sync) SynchronizeInputs(values []byte, size int64) int64 {
 	var disconnectedFlags int64 = 0
-	output := values
-	logrus.Info("SynchronizeInputs Inputs : ", output)
 
 	if size < s.Config.NumPlayers*s.Config.InputSize {
 		logrus.Panic("Assert error size")
 	}
 
-	output = make([]byte, size)
+	output := make([]byte, size)
 	for i := 0; i < int(s.Config.NumPlayers); i++ {
 		var input GameInput
 		if s.LocalConnectStatus[i].Disconnected && s.FrameCount > s.LocalConnectStatus[i].LastFrame {
@@ -144,8 +142,8 @@ func (s *Sync) SynchronizeInputs(values []byte, size int64) int64 {
 		}
 		output = make([]byte, len(input.Bits)*i+len(output))
 		output = input.Bits
-		logrus.Info("SynchronizeInputs Output : ", output)
 	}
+	values = output
 	return disconnectedFlags
 }
 
