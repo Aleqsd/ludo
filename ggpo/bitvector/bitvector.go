@@ -24,6 +24,9 @@ func WriteNibblet(vector []byte, nibble int64, offset *int64) {
 
 func ReadBit(vector []byte, offset *int64) int64 {
 	var retval int64 = int64(vector[(*offset)/8] & (1 << ((*offset) % 8)))
+	if retval > 1 {
+		retval = 1
+	}
 	*offset += 1
 	return retval
 }
