@@ -287,10 +287,9 @@ func (n *Netplay) JoinConnection() {
 }
 
 func (n *Netplay) Disconnect() ggponet.GGPOErrorCode {
-	logrus.Info("CurrentState Disconnect !")
+	logrus.Info("Netplay Disconnect !")
 	n.CurrentState = Disconnected
 	n.ShutDownTimeout = int64(platform.GetCurrentTimeMS()) + UDP_SHUTDOWN_TIMER
-	n.Conn.Close()
 	if n.Conn == nil {
 		return ggponet.GGPO_OK
 	}
@@ -417,7 +416,7 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 				}
 			}
 			if offset > numBits {
-				logrus.Panic("Assert error offset > numBits")
+				logrus.Panic("Assert error offset : ", offset, " > numBits : ", numBits)
 			}
 
 			// Now if we want to use these inputs, go ahead and send them to the emulator.

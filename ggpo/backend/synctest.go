@@ -100,7 +100,7 @@ func (s *SyncTestBackend) IncrementFrame() ggponet.GGPOErrorCode {
 	s.Sync.IncrementFrame()
 	s.CurrentInput.Erase()
 
-	logrus.Info(fmt.Sprintf("End of frame(%d)...\n", s.Sync.FrameCount))
+	logrus.Info(fmt.Sprintf("End of frame(%d)...", s.Sync.FrameCount))
 
 	if s.RollingBack {
 		return ggponet.GGPO_OK
