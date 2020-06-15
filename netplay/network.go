@@ -87,6 +87,8 @@ func DisconnectPlayer(player int64) {
 
 func AdvanceFrame(inputs []byte, disconnectFlags int64) {
 	local.NewState[1] = ByteToBool(inputs)
+	logrus.Info("======================= Inputs : ", inputs)
+	logrus.Info("======================= NewState[1] : ", local.NewState[1])
 
 	// update the checksums to display in the top of the window.  this
 	// helps to detect desyncs.
@@ -141,7 +143,6 @@ func RandBoolSlice() [local.ActionLast]bool {
 	return boolInputs
 }
 
-//TODO: Define how to get the inputs
 func RunFrame() {
 	var result ggponet.GGPOErrorCode = ggponet.GGPO_OK
 	var disconnectFlags int64
@@ -154,8 +155,6 @@ func RunFrame() {
 		}
 		result = ggpo.AddLocalInput(ggpoSession, ngs.LocalPlayerHandle, input, int64(len(input)))
 	}
-
-	//logrus.Info("Result from RunFrame : ", result)
 
 	// synchronize these inputs with ggpo.  If we have enough input to proceed
 	// ggpo will modify the input list with the correct inputs to use and
