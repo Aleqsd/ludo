@@ -254,7 +254,6 @@ func (n *Netplay) SendMsg(msg *NetplayMsgType) {
 
 	var queue QueueEntry
 	queue.Init(platform.GetCurrentTimeMS(), n.RemoteAddr, msg)
-	logrus.Info("SendMsg queue DestAddr : ", queue.DestAddr, " , MsgType : ", queue.Msg.Hdr.Type, " , QueueTime : ", queue.QueueTime)
 	var t lib.T = &queue
 	n.SendQueue.Push(&t)
 	n.PumpSendQueue()
@@ -339,7 +338,6 @@ func (n *Netplay) OnSyncReply(msg *NetplayMsgType) bool {
 		var evt Event
 		evt.Init(EventSynchronized)
 		n.QueueEvent(&evt)
-		logrus.Info("CurrentState Running !")
 		n.CurrentState = Running
 		n.LastReceivedInput.Frame = -1
 		n.RemoteMagicNumber = msg.Hdr.Magic
@@ -356,7 +354,6 @@ func (n *Netplay) OnSyncReply(msg *NetplayMsgType) bool {
 
 func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 	// If a disconnect is requested, go ahead and disconnect now.
-	logrus.Info("Entering OnInput")
 	disconnectRequested := msg.Input.DisconnectRequested
 	if disconnectRequested {
 		if n.CurrentState != Disconnected && !n.DisconnectEventSent {
@@ -454,7 +451,6 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 		n.LastAckedInput = *(*n.PendingOutput.Front()).(*lib.GameInput)
 		n.PendingOutput.Pop()
 	}
-	logrus.Info("Exiting OnInput")
 	return true
 }
 
@@ -552,13 +548,11 @@ func (n *Netplay) GetEvent(e *Event) bool {
 	e.Synchronizing = (*n.EventQueue.Front()).(*Event).Synchronizing
 	e.Input = (*n.EventQueue.Front()).(*Event).Input
 	e.DisconnectTimeout = (*n.EventQueue.Front()).(*Event).DisconnectTimeout
-	logrus.Info("Getting event", e.Type)
 	n.EventQueue.Pop()
 	return true
 }
 
 func (n *Netplay) QueueEvent(e *Event) {
-	logrus.Info("Queuing event", e.Type)
 	var t lib.T = e
 	n.EventQueue.Push(&t)
 }

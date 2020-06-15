@@ -200,12 +200,9 @@ func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
 }
 
 func (p *Peer2PeerBackend) Poll2Players(currentFrame int64) int64 {
-	logrus.Info("Poll2Players Entered")
 	totalMinConfirmed := int64(lib.MAX_INT)
-	logrus.Info("Poll2Players int(p.NumPlayers) ", int(p.NumPlayers))
 	for i := 0; i < int(p.NumPlayers); i++ {
 		if int64(i) != p.LocalPlayerIndex {
-			logrus.Info("Poll2Players len(p.Endpoints[i].PeerConnectStatus) ", len(p.Endpoints[i].PeerConnectStatus))
 			var ignore int64
 			queueConnected := p.Endpoints[i].GetPeerConnectStatus(int64(i), &ignore)
 
@@ -227,7 +224,6 @@ func (p *Peer2PeerBackend) Poll2Players(currentFrame int64) int64 {
 }
 
 func (p *Peer2PeerBackend) PollNPlayers(currentFrame int64) int64 {
-	logrus.Info("PollNPlayers Entered")
 
 	var lastReceived int64
 	// discard confirmed frames as appropriate
@@ -318,8 +314,6 @@ func (p *Peer2PeerBackend) OnNetplaySpectatorEvent(evt *network.Event, queue int
 func (p *Peer2PeerBackend) OnNetplayEvent(evt *network.Event, handle ggponet.GGPOPlayerHandle) {
 	var info ggponet.GGPOEvent
 
-	logrus.Info("OnNetplayEvent ", evt.Type)
-
 	switch evt.Type {
 	case network.EventConnected:
 		info.Code = ggponet.GGPO_EVENTCODE_CONNECTED_TO_PEER
@@ -336,7 +330,6 @@ func (p *Peer2PeerBackend) OnNetplayEvent(evt *network.Event, handle ggponet.GGP
 		break
 
 	case network.EventSynchronized:
-		logrus.Info("EventSynchronized")
 		info.Code = ggponet.GGPO_EVENTCODE_SYNCHRONIZED_WITH_PEER
 		info.Synchronized.Player = handle
 		p.Callbacks.OnEvent(&info)
