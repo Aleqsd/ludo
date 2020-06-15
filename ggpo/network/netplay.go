@@ -405,13 +405,14 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 				button := bitvector.ReadNibblet(bits, &offset)
 				if useInputs {
 					if on > 0 {
-						logrus.Info("Button : ", bits) //TODO: It has been temporary fixed %
+						logrus.Info("Button : ", bits) //TODO: It has been temporary fixed %40
 						n.LastReceivedInput.Set(button)
 					} else {
 						n.LastReceivedInput.Clear(button)
 					}
 				}
 			}
+			logrus.Info("Button Input : ", n.LastReceivedInput)
 			if offset > numBits {
 				logrus.Panic("Assert error offset : ", offset, " > numBits : ", numBits)
 			}
@@ -424,7 +425,7 @@ func (n *Netplay) OnInput(msg *NetplayMsgType) bool {
 				}
 				n.LastReceivedInput.Frame = currentFrame
 
-				// Send the event to the emualtor
+				// Send the event to the emulator
 				var evt Event
 				evt.Init(EventInput)
 				evt.Input = n.LastReceivedInput

@@ -140,7 +140,7 @@ func (s *Sync) SynchronizeInputs(values []byte, size int64) int64 {
 		} else {
 			s.InputQueues[i].GetInput(s.FrameCount, &input)
 		}
-		output = make([]byte, len(input.Bits)*i+len(output))
+		output = make([]byte, len(input.Bits)*i+len(output)) //TODO: Remove. Find a way to concatenate inputs
 		output = input.Bits
 	}
 	values = output
