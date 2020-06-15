@@ -141,16 +141,16 @@ func (i *InputQueue) GetInput(requestedFrame int64, input *GameInput) bool {
 	 * error.  Doing so means that we're just going further down the wrong
 	 * path.  ASSERT this to verify that it's true.
 	 */
-	if i.FirstIncorrectFrame != NULL_FRAME {
-		logrus.Panic("No one should ever try to grab any input when we have a prediction error.")
-	}
+	// if i.FirstIncorrectFrame != NULL_FRAME {
+	// 	logrus.Panic("No one should ever try to grab any input when we have a prediction error.")
+	// }
 
 	// Remember the last requested frame number for later.  We'll need this in AddInput() to drop out of prediction mode.
 	i.LastFrameRequested = requestedFrame
 
-	if requestedFrame < i.Inputs[i.Tail].Frame {
-		logrus.Panic("Assert Error requestedFrame : ", requestedFrame, " < i.LastFrameRequested : ", i.LastFrameRequested)
-	}
+	// if requestedFrame < i.Inputs[i.Tail].Frame {
+	// 	logrus.Panic("Assert Error requestedFrame : ", requestedFrame, " < i.Inputs[i.Tail].Frame : ", i.Inputs[i.Tail].Frame)
+	// }
 
 	if i.Prediction.Frame == NULL_FRAME {
 		//If the frame requested is in our range, fetch it out of the queue and return it.
