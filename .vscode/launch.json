@@ -9,16 +9,16 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${fileDirname}",
-            "env": {
-                "CGO_LDFLAGS":"C:/OpenAL/build/Release"
-            },
+            "program": "${workspaceFolder}",
+            "env": {},
             "args": [
                 "-n=2",
-                "-L cores/snes9x_libretro.dll",
-                "C:/Users/aleqs/Documents/Random/Street_Fighter_II_Turbo_U.smc",
+                "-L",
+                "cores/snes9x_libretro.dll",
+                "C:/Users/aleqs/Documents/Random/SF.smc",
                 "local",
-                "185.228.229.104:8089"
+                "127.0.0.1:8090",
+                "8089"
             ]
         }
     ]
