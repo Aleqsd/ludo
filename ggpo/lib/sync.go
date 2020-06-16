@@ -131,6 +131,8 @@ func (s *Sync) SynchronizeInputs(values []byte, size int64) int64 {
 		logrus.Panic("Assert error size")
 	}
 
+	controllerSize := int(size / ggponet.GGPO_MAX_PLAYERS)
+
 	output := make([]byte, size)
 	for i := 0; i < int(s.Config.NumPlayers); i++ {
 		var input GameInput
@@ -140,10 +142,17 @@ func (s *Sync) SynchronizeInputs(values []byte, size int64) int64 {
 		} else {
 			s.InputQueues[i].GetInput(s.FrameCount, &input)
 		}
-		output = make([]byte, len(input.Bits)*i+len(output)) //TODO: Remove. Find a way to concatenate inputs
-		output = input.Bits
+		for j := 0; j < len(input.Bits); j++ {
+			output[controllerSize*i+j] = input.Bits[j] //TODO: Maybe not concatenate but make has many slices in output that there are players
+		}
 	}
-	values = output
+	for i := 0; i < len(output); i++ {
+		if i >= len(values) {
+			break
+		}
+		values[i] = output[i]
+	}
+
 	return disconnectedFlags
 }
 

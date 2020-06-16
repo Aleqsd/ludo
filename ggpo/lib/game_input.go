@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	GAMEINPUT_MAX_BYTES   = 20
+	GAMEINPUT_MAX_BYTES   = 20 //TODO: Get this value dynamically (with ActionLast for example)
 	GAMEINPUT_MAX_PLAYERS = 2
 	NULL_FRAME            = -1
 )
@@ -25,7 +25,7 @@ func (g *GameInput) Init(iframe int64, ibits []byte, isize int64, offset int64) 
 	}
 	g.Frame = iframe
 	g.Size = isize
-	g.Bits = make([]byte, GAMEINPUT_MAX_BYTES*GAMEINPUT_MAX_PLAYERS)
+	g.Bits = make([]byte, GAMEINPUT_MAX_BYTES)
 	if len(ibits) > 0 {
 		for k := 0; k < int(offset*isize); k += int(isize) {
 			for j := 0; j < int(isize); j++ {
@@ -41,7 +41,7 @@ func (g *GameInput) SimpleInit(iframe int64, ibits []byte, isize int64) {
 	}
 	g.Frame = iframe
 	g.Size = isize
-	g.Bits = make([]byte, GAMEINPUT_MAX_BYTES*GAMEINPUT_MAX_PLAYERS)
+	g.Bits = make([]byte, GAMEINPUT_MAX_BYTES)
 	if len(ibits) > 0 {
 		copy(g.Bits, ibits)
 	}
@@ -68,11 +68,11 @@ func (g *GameInput) Equal(other GameInput, bitsonly bool) bool {
 }
 
 func (g *GameInput) Set(i int64) {
-	g.Bits[i/8%(GAMEINPUT_MAX_BYTES*GAMEINPUT_MAX_PLAYERS)] |= (1 << (i % 8))
+	g.Bits[i/8%(GAMEINPUT_MAX_BYTES)] |= (1 << (i % 8))
 }
 
 func (g *GameInput) Clear(i int64) {
-	g.Bits[i/8%(GAMEINPUT_MAX_BYTES*GAMEINPUT_MAX_PLAYERS)] &= ^(1 << (i % 8))
+	g.Bits[i/8%(GAMEINPUT_MAX_BYTES)] &= ^(1 << (i % 8))
 }
 
 func (g *GameInput) Erase() {
@@ -80,5 +80,5 @@ func (g *GameInput) Erase() {
 }
 
 func (g *GameInput) Value(i int64) bool {
-	return (g.Bits[i/8%(GAMEINPUT_MAX_BYTES*GAMEINPUT_MAX_PLAYERS)] & (1 << (i % 8))) != 0
+	return (g.Bits[i/8%(GAMEINPUT_MAX_BYTES)] & (1 << (i % 8))) != 0
 }

@@ -86,9 +86,25 @@ func DisconnectPlayer(player int64) {
 }
 
 func AdvanceFrame(inputs []byte, disconnectFlags int64) {
-	local.NewState[1] = ByteToBool(inputs)
-	logrus.Info("======================= Inputs : ", inputs)
-	logrus.Info("======================= NewState[1] : ", local.NewState[1])
+	if len(inputs) == int(local.ActionLast*ggponet.GGPO_MAX_PLAYERS) {
+		playersInputs := make([][]byte, ggponet.GGPO_MAX_PLAYERS)
+		for i := 0; i < len(inputs); i += int(local.ActionLast) {
+			playersInputs[i/int(local.ActionLast)] = make([]byte, local.ActionLast)
+			for j := 0; j < int(local.ActionLast); j++ {
+				playersInputs[i/int(local.ActionLast)][j] = inputs[i+j]
+			}
+		}
+		count := 0
+		for i := 0; i < len(playersInputs); i++ {
+			if ngs.Players[i].Type == ggponet.GGPO_PLAYERTYPE_LOCAL {
+				continue
+			}
+			local.NewState[1+count] = ByteToBool(playersInputs[i])
+			count++
+		}
+		logrus.Info("======================= Inputs : ", inputs)
+		logrus.Info("======================= NewState[1] : ", local.NewState[1])
+	}
 
 	// update the checksums to display in the top of the window.  this
 	// helps to detect desyncs.
