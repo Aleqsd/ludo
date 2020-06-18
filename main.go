@@ -43,16 +43,16 @@ func runLoop(vid *video.Video, m *menu.Menu) {
 		m.ProcessHotkeys()
 		ntf.Process(dt)
 		vid.ResizeViewport()
-		if !state.Global.MenuActive {
+
+		now = netplay.GetCurrentTimeMS()
+		netplay.Idle()
+		if now >= next {
+			netplay.RunFrame()
+			next = now + (1000 / 60)
+		}
+		if !state.Global.MenuActive && netplay.Synchronized {
 			if state.Global.CoreRunning {
 				state.Global.Core.Run()
-
-				now = netplay.GetCurrentTimeMS()
-				netplay.Idle()
-				if now >= next {
-					netplay.RunFrame()
-					next = now + (1000 / 60)
-				}
 
 				if state.Global.Core.FrameTimeCallback != nil {
 					state.Global.Core.FrameTimeCallback.Callback(state.Global.Core.FrameTimeCallback.Reference)
@@ -127,7 +127,9 @@ func main() {
 
 	core.Init(vid)
 
-	InitNetwork(*numPlayers, playersIP)
+	if *numPlayers > 1 {
+		InitNetwork(*numPlayers, playersIP)
+	}
 
 	input.Init(vid)
 

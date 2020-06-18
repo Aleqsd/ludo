@@ -14,6 +14,8 @@ func GetCurrentTimeMS() uint64 {
 	return uint64(time.Now().UnixNano() / int64(time.Millisecond))
 }
 
+var Synchronized = false
+
 type Callbacks struct{}
 
 func (c *Callbacks) BeginGame(game string) bool {
@@ -64,6 +66,7 @@ func (c *Callbacks) OnEvent(info *ggponet.GGPOEvent) {
 		break
 	case ggponet.GGPO_EVENTCODE_SYNCHRONIZED_WITH_PEER:
 		ngs.UpdateConnectProgress(info.Synchronized.Player, 100)
+		Synchronized = true
 		break
 	case ggponet.GGPO_EVENTCODE_RUNNING:
 		ngs.SetAllConnectState(Running)
