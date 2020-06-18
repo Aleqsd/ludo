@@ -89,7 +89,7 @@ func reset(state inputstate) inputstate {
 }
 
 // pollJoypads process joypads of all players
-func pollJoypads(state inputstate) inputstate {
+func PollJoypads(state inputstate) inputstate {
 	for p := range state {
 		buttonState := glfw.Joystick.GetButtons(glfw.Joystick(p))
 		axisState := glfw.Joystick.GetAxes(glfw.Joystick(p))
@@ -151,7 +151,7 @@ func netToPlayer(st inputstate, p int) inputstate {
 }*/
 
 // pollKeyboard processes keyboard keys
-func pollKeyboard(st inputstate) inputstate {
+func PollKeyboard(st inputstate) inputstate {
 	// if netplay.Conn != nil { // Netplay mode
 	// 	if netplay.Listen != "" { // Host mode
 	// 		st = keyboardToPlayer(st, 0)
@@ -186,9 +186,9 @@ func getPressedReleased(new inputstate, old inputstate) (inputstate, inputstate)
 
 // Poll calculates the input state. It is meant to be called for each frame.
 func Poll() {
-	NewState = reset(NewState)
+	/*NewState = reset(NewState)
 	NewState = pollJoypads(NewState)
-	NewState = pollKeyboard(NewState)
+	NewState = pollKeyboard(NewState)*/
 
 	Pressed, Released = getPressedReleased(NewState, OldState)
 
@@ -199,10 +199,11 @@ func Poll() {
 }
 
 // Set the NewState at false everywhere
-/*
+
 func Reset() {
 	NewState = reset(NewState)
-}*/
+}
+
 /*
 // Get the remote player queue and the localPlayerInput
 func DeQueue() {

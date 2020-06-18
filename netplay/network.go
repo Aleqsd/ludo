@@ -94,13 +94,8 @@ func AdvanceFrame(inputs []byte, disconnectFlags int64) {
 				playersInputs[i/int(local.ActionLast)][j] = inputs[i+j]
 			}
 		}
-		count := 0
 		for i := 0; i < len(playersInputs); i++ {
-			if ngs.Players[i].Type == ggponet.GGPO_PLAYERTYPE_LOCAL {
-				continue
-			}
-			local.NewState[1+count] = ByteToBool(playersInputs[i])
-			count++
+			local.NewState[i] = ByteToBool(playersInputs[i])
 		}
 		logrus.Info("======================= Inputs : ", inputs)
 		logrus.Info("======================= NewState[1] : ", local.NewState[1])
@@ -163,6 +158,10 @@ func RunFrame() {
 	var result ggponet.GGPOErrorCode = ggponet.GGPO_OK
 	var disconnectFlags int64
 	inputs := make([]byte, int64(local.ActionLast*ggponet.GGPO_MAX_PLAYERS))
+
+	local.Reset()
+	local.NewState = local.PollJoypads(local.NewState)
+	local.NewState = local.PollKeyboard(local.NewState)
 
 	if ngs.LocalPlayerHandle != ggponet.GGPO_INVALID_HANDLE {
 		input := BoolToByte(local.NewState[0])
