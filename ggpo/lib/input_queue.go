@@ -87,9 +87,9 @@ func (i *InputQueue) DiscardConfirmedFrames(frame int64) {
 
 		logrus.Info(fmt.Sprintf("difference of %d frames.", offset))
 
-		if offset < 0 {
-			logrus.Panic("offset < 0")
-		}
+		// if offset < 0 {
+		// 	logrus.Panic("offset < 0")
+		// }
 
 		i.Tail = (i.Tail + offset) % INPUT_QUEUE_LENGTH
 		i.Length -= offset
