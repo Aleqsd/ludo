@@ -125,7 +125,7 @@ func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []gg
 		n.PeerConnectStatus[i].LastFrame = -1
 	}
 
-	n.SendLatency = platform.GetConfigInt("ggpo.network.delay")
+	n.SendLatency = platform.GetConfigInt("ggpo.network.delay") //TODO: Really usefull???
 	n.OopPercent = platform.GetConfigInt("ggpo.oop.percent")
 	n.OoPacket.Msg = nil
 
