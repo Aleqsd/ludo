@@ -72,7 +72,6 @@ type Netplay struct {
 	OoPacket              OoPacket
 	NetplayState          StateType
 	ReceiveChannel        chan NetplayMsgType
-	ReceiveCount          uint64
 	DisconnectNotifyStart int64
 	DisconnectNotifySent  bool
 	NextRecvSeq           uint64
@@ -134,7 +133,6 @@ func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, queue int64, status []gg
 	poll.RegisterLoop(&i)
 
 	n.ReceiveChannel = make(chan NetplayMsgType, 60)
-	n.ReceiveCount = 0
 
 	logrus.Info(fmt.Sprintf("binding udp socket to port %d.", n.LocalAddr.Port))
 }
@@ -169,7 +167,6 @@ func (n *Netplay) Read() {
 		decoder := gob.NewDecoder(buffer)
 		decoder.Decode(msg)
 		n.ReceiveChannel <- *msg
-		n.ReceiveCount++
 	}
 }
 
@@ -656,11 +653,10 @@ func (n *Netplay) IsSynchronized() bool {
 }
 
 func (n *Netplay) OnLoopPoll() bool {
-	messages := make([]NetplayMsgType, n.ReceiveCount)
-	for i := 0; i < int(n.ReceiveCount); i++ {
+	messages := make([]NetplayMsgType, len(n.ReceiveChannel))
+	for i := 0; i < len(n.ReceiveChannel); i++ {
 		messages[i] = <-n.ReceiveChannel
 	}
-	n.ReceiveCount = 0
 
 	for i := 0; i < len(messages); i++ {
 		n.OnMsg(&messages[i])
