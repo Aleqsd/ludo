@@ -295,9 +295,9 @@ func (i *InputQueue) AddDelayedInputToQueue(input GameInput, frameNumber int64) 
 		}
 	}
 
-	if i.Length > INPUT_QUEUE_LENGTH {
-		logrus.Panic("Assert Error : Length too high")
-	}
+	// if i.Length > INPUT_QUEUE_LENGTH {
+	// 	logrus.Panic("Assert Error : Length too high")
+	// }
 }
 
 func (i *InputQueue) AdvanceQueueHead(frame int64) int64 {
