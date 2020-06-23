@@ -88,3 +88,11 @@ func SetDisconnectNotifyStart(ggpo *ggponet.GGPOSession, timeout int64) ggponet.
 	}
 	return (*ggpo).SetDisconnectNotifyStart(timeout)
 }
+
+/* TODOs :
+- Check others players game state checksum
+- Rollback if other players checksum is different
+- Check prediction and synctest
+- Refractor
+- Remove unnecessary
+*/
