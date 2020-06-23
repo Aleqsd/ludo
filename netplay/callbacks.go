@@ -3,11 +3,14 @@ package netplay
 //TODO: Structure qui hérite de GGPOSessionCallbacks
 
 import (
+	"hash/crc32"
 	"time"
 
 	"github.com/libretro/ludo/ggpo"
 	"github.com/libretro/ludo/ggpo/ggponet"
 	local "github.com/libretro/ludo/input"
+	"github.com/libretro/ludo/state"
+	"github.com/sirupsen/logrus"
 )
 
 func GetCurrentTimeMS() uint64 {
@@ -22,25 +25,31 @@ func (c *Callbacks) BeginGame(game string) bool {
 	return true
 }
 
-func (c *Callbacks) SaveGameState(buffer **byte, len *int64, checksum *int64, frame int64) {
-	/* *len = sizeof(gs);
-	*buffer = (unsigned char *)malloc(*len);
-	if (!*buffer) {
-		return false;
+func (c *Callbacks) SaveGameState(buffer []byte, len *int64, checksum *int64, frame int64) {
+	logrus.Info("===================== Save Game State ==========================")
+	var err error
+	buffer, err = state.Global.Core.Serialize(uint(*len))
+	if err != nil {
+		logrus.Info("Error when saving game state")
 	}
-	memcpy(*buffer, &gs, *len);
-	*checksum = fletcher32_checksum((short *)*buffer, *len / 2);*/
+	*checksum = int64(crc32.ChecksumIEEE(buffer))
 }
 
-func (c *Callbacks) LoadGameState(buffer *byte, len int64) {
-	//memcpy(&gs, buffer, len)
+func (c *Callbacks) LoadGameState(buffer []byte, len int64) {
+	logrus.Info("===================== Load Game State ==========================")
+	if len > 0 {
+		err := state.Global.Core.Unserialize(buffer, uint(len))
+		if err != nil {
+			logrus.Info("Error when loading game state")
+		}
+	}
 }
 
 func (c *Callbacks) LogGameState(filename string, buffer *byte, len int64) {
 
 }
 
-func (c *Callbacks) FreeBuffer(buffer *byte) {
+func (c *Callbacks) FreeBuffer(buffer []byte) {
 	//TODO: Remove 'cause useless
 }
 

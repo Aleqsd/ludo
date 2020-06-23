@@ -380,7 +380,6 @@ func (p *Peer2PeerBackend) AddPlayer(player *ggponet.GGPOPlayer, handle *ggponet
 }
 
 func (p *Peer2PeerBackend) IncrementFrame() ggponet.GGPOErrorCode {
-
 	logrus.Info(fmt.Sprintf("End of frame (%d)...", p.Sync.FrameCount))
 	p.Sync.IncrementFrame()
 	p.DoPoll()

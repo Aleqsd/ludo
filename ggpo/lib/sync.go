@@ -38,7 +38,7 @@ func (s *Sync) Init(config Config, ConnectStatus []ggponet.ConnectStatus) {
 }
 
 type SavedFrame struct {
-	Buf      *byte
+	Buf      []byte
 	Cbuf     int64
 	Frame    int64
 	Checksum int64
@@ -157,9 +157,9 @@ func (s *Sync) SynchronizeInputs(values []byte, size int64) int64 {
 }
 
 func (s *Sync) CheckSimulation() {
-	var seek_to int64
-	if !s.CheckSimulationConsistency(&seek_to) {
-		s.AdjustSimulation(seek_to)
+	var seekTo int64
+	if !s.CheckSimulationConsistency(&seekTo) {
+		s.AdjustSimulation(seekTo)
 	}
 }
 
@@ -230,7 +230,7 @@ func (s *Sync) SaveCurrentFrame() {
 		state.Buf = nil
 	}
 	state.Frame = s.FrameCount
-	s.Callbacks.SaveGameState(&state.Buf, &state.Cbuf, &state.Checksum, state.Frame)
+	s.Callbacks.SaveGameState(state.Buf, &state.Cbuf, &state.Checksum, state.Frame)
 
 	logrus.Info(fmt.Sprintf("Saved frame info %d (size: %d  checksum: %08x).",
 		state.Frame, state.Cbuf, state.Checksum))

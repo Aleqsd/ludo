@@ -143,10 +143,10 @@ type sync struct {
  */
 type GGPOSessionCallbacks interface {
 	BeginGame(game string) bool
-	SaveGameState(buffer **byte, len *int64, checksum *int64, frame int64)
-	LoadGameState(buffer *byte, len int64)
+	SaveGameState(buffer []byte, len *int64, checksum *int64, frame int64)
+	LoadGameState(buffer []byte, len int64)
 	LogGameState(filename string, buffer *byte, len int64)
-	FreeBuffer(buffer *byte)
+	FreeBuffer(buffer []byte)
 	AdvanceFrame(flags int64)
 	OnEvent(info *GGPOEvent)
 }

@@ -25,7 +25,7 @@ type SyncTestBackend struct {
 type SavedInfo struct {
 	Frame    int64
 	Checksum int64
-	Buf      *byte
+	Buf      []byte
 	Cbuf     int64
 	Input    lib.GameInput
 }

@@ -277,7 +277,7 @@ func (i *InputQueue) AddDelayedInputToQueue(input GameInput, frameNumber int64) 
 		 * in GetFirstIncorrectFrame()
 		 */
 		if i.FirstIncorrectFrame == NULL_FRAME && !i.Prediction.Equal(input, true) {
-			logrus.Info(fmt.Sprintf("frame %d does not match prediction.  marking error.", frameNumber))
+			logrus.Info(fmt.Sprintf("Frame %d does not match prediction. Marking error.", frameNumber))
 			i.FirstIncorrectFrame = frameNumber
 		}
 
