@@ -48,10 +48,6 @@ func (c *Callbacks) LogGameState(filename string, buffer *byte, len int64) {
 	//TODO: Remove?
 }
 
-func (c *Callbacks) FreeBuffer(buffer []byte) {
-	//TODO: Remove 'cause useless
-}
-
 func (c *Callbacks) AdvanceFrame(flags int64) {
 	inputs := make([]byte, int64(local.ActionLast*ggponet.GGPO_MAX_PLAYERS))
 	var disconnectFlags int64

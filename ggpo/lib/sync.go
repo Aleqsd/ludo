@@ -226,7 +226,6 @@ func (s *Sync) SaveCurrentFrame() {
 	 */
 	var state *SavedFrame = &s.SavedState.Frames[s.SavedState.Head]
 	if state.Buf != nil {
-		s.Callbacks.FreeBuffer(state.Buf)
 		state.Buf = nil
 	}
 	state.Frame = s.FrameCount
