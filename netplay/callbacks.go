@@ -1,7 +1,5 @@
 package netplay
 
-//TODO: Structure qui hérite de GGPOSessionCallbacks
-
 import (
 	"hash/crc32"
 	"time"
@@ -22,6 +20,7 @@ var Synchronized = false
 type Callbacks struct{}
 
 func (c *Callbacks) BeginGame(game string) bool {
+	//TODO: Remove?
 	return true
 }
 
@@ -46,7 +45,7 @@ func (c *Callbacks) LoadGameState(buffer []byte, len int64) {
 }
 
 func (c *Callbacks) LogGameState(filename string, buffer *byte, len int64) {
-
+	//TODO: Remove?
 }
 
 func (c *Callbacks) FreeBuffer(buffer []byte) {

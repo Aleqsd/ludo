@@ -179,18 +179,6 @@ func InitNetwork(numPlayers int, playersIP []string) {
 		}
 	}
 	//TODO: Spectators
-	// these are spectators...
-	/*num_spectators := 0
-	while (offset < __argc) {
-		players[i].type = GGPO_PLAYERTYPE_SPECTATOR;
-		if (swscanf_s(__wargv[offset++], L"%[^:]:%hd", wide_ip_buffer, wide_ip_buffer_size, &players[i].u.remote.port) != 2) {
-		Syntax();
-		return 1;
-		}
-		wcstombs_s(nullptr, players[i].u.remote.ip_address, ARRAYSIZE(players[i].u.remote.ip_address), wide_ip_buffer, _TRUNCATE);
-		i++;
-		num_spectators++;
-	}*/
 
 	netplay.Init(int64(numPlayers), players, 0, false)
 }

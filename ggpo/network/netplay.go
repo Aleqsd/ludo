@@ -293,7 +293,7 @@ func (n *Netplay) Disconnect() ggponet.GGPOErrorCode {
 }
 
 func (n *Netplay) GetPeerConnectStatus(id int64, frame *int64) bool {
-	logrus.Info("LastFrame ", n.PeerConnectStatus[id].LastFrame, " , id ", id)
+	logrus.Info("LastFrame ", n.PeerConnectStatus[id].LastFrame, ", id ", id)
 	*frame = n.PeerConnectStatus[id].LastFrame
 	return !n.PeerConnectStatus[id].Disconnected
 }

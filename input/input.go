@@ -33,9 +33,6 @@ var (
 	OldState inputstate // input state for the previous frame
 	Released inputstate // keys just released during this frame
 	Pressed  inputstate // keys just pressed during this frame
-
-	//localPlayerInput [delay.Delay][20]bool
-	//localCount       uint64
 )
 
 // Hot keys
@@ -124,52 +121,9 @@ func keyboardToPlayer(st inputstate, p int) inputstate {
 	return st
 }
 
-/*
-func playerToNet(st inputstate, p int) {
-	netoutput := [20]byte{}
-	for i, b := range st[p] {
-		if b {
-			netoutput[i] = 1
-		}
-	}
-	if _, err := netplay.Conn.Write(netoutput[:]); err != nil {
-		log.Println(err)
-	}
-}
-
-func netToPlayer(st inputstate, p int) inputstate {
-	netinput := [20]byte{}
-	if _, err := netplay.Conn.Read(netinput[:]); err != nil {
-		log.Println(err)
-	}
-	for i, b := range netinput {
-		if b == 1 {
-			st[p][i] = true
-		}
-	}
-	return st
-}*/
-
 // pollKeyboard processes keyboard keys
 func PollKeyboard(st inputstate) inputstate {
-	// if netplay.Conn != nil { // Netplay mode
-	// 	if netplay.Listen != "" { // Host mode
-	// 		st = keyboardToPlayer(st, 0)
-	// 		// Write
-	// 		playerToNet(st, 0)
-	// 		// Read
-	// 		st = netToPlayer(st, 1)
-	// 	} else if netplay.Join != "" { // Guest mode
-	// 		st = keyboardToPlayer(st, 1)
-	// 		// Write
-	// 		playerToNet(st, 1)
-	// 		// Read
-	// 		st = netToPlayer(st, 0)
-	// 	}
-	// } else { // Non netplay mode
 	st = keyboardToPlayer(st, 0)
-	//}
-
 	return st
 }
 
@@ -186,44 +140,14 @@ func getPressedReleased(new inputstate, old inputstate) (inputstate, inputstate)
 
 // Poll calculates the input state. It is meant to be called for each frame.
 func Poll() {
-	/*NewState = reset(NewState)
-	NewState = pollJoypads(NewState)
-	NewState = pollKeyboard(NewState)*/
-
 	Pressed, Released = getPressedReleased(NewState, OldState)
-
-	// Store the old input state for comparisions
 	OldState = NewState
-
-	//playerToNet(NewState, 0)
 }
-
-// Set the NewState at false everywhere
 
 func Reset() {
 	NewState = reset(NewState)
 }
 
-/*
-// Get the remote player queue and the localPlayerInput
-func DeQueue() {
-	log.Println("DeQueue")
-
-	remotePlayerInput := <-delay.RemoteInputQueue
-	NewState[0] = localPlayerInput[localCount%delay.Delay]
-	NewState[1] = remotePlayerInput
-}*/
-/*
-// Get the local input into localPlayerInput
-func LocalInputs() {
-	var st inputstate
-	st = reset(st)
-	st = pollJoypads(st)
-	st = pollKeyboard(st)
-	localPlayerInput[localCount] = st[0]
-	localCount++
-}
-*/
 // State is a callback passed to core.SetInputState
 // It returns 1 if the button corresponding to the parameters is pressed
 func State(port uint, device uint32, index uint, id uint) int16 {

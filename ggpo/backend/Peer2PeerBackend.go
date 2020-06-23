@@ -146,7 +146,7 @@ func (p *Peer2PeerBackend) DoPoll() ggponet.GGPOErrorCode {
 	if !p.Sync.Rollingback {
 		p.Poll.Pump()
 
-		p.PollNetplayEvents() //TODO:
+		p.PollNetplayEvents()
 
 		if !p.Synchronizing {
 			p.Sync.CheckSimulation()
