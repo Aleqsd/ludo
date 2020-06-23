@@ -45,7 +45,7 @@ func (c *Callbacks) FreeBuffer(buffer *byte) {
 }
 
 func (c *Callbacks) AdvanceFrame(flags int64) {
-	inputs := make([]byte, ggponet.GGPO_MAX_PLAYERS) //TODO: Not sure GGPO_MAX_PLAYERS is usefull for this make (make is done in sync.go when SynchronizeInput() is called)
+	inputs := make([]byte, int64(local.ActionLast*ggponet.GGPO_MAX_PLAYERS))
 	var disconnectFlags int64
 
 	// Make sure we fetch new inputs from GGPO and use those to update
