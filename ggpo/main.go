@@ -6,9 +6,9 @@ import (
 )
 
 // StartSession begins our game session
-func StartSession(session **ggponet.GGPOSession, cb ggponet.GGPOSessionCallbacks, game string, numPlayers int64, inputSize int64) ggponet.GGPOErrorCode {
+func StartSession(session **ggponet.GGPOSession, cb ggponet.GGPOSessionCallbacks, game string, numPlayers int64, inputSize int64, localPort string) ggponet.GGPOErrorCode {
 	var p2p backend.Peer2PeerBackend = backend.Peer2PeerBackend{NumPlayers: numPlayers, InputSize: inputSize}
-	p2p.Init(cb, game)
+	p2p.Init(cb, game, localPort)
 	var s ggponet.GGPOSession = &p2p
 	*session = &s
 	return ggponet.GGPO_OK

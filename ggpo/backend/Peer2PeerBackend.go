@@ -32,11 +32,13 @@ type Peer2PeerBackend struct {
 	DisconnectNotifyStart int64
 	LocalPlayerIndex      int64
 	Synchronizing         bool
+	LocalPort             string
 	Callbacks             ggponet.GGPOSessionCallbacks
 }
 
-func (p *Peer2PeerBackend) Init(cb ggponet.GGPOSessionCallbacks, gamename string) {
+func (p *Peer2PeerBackend) Init(cb ggponet.GGPOSessionCallbacks, gamename string, localPort string) {
 	p.Callbacks = cb
+	p.LocalPort = localPort
 	p.Synchronizing = true
 	p.NextRecommendedSleep = 0
 	p.Poll.Init()
@@ -58,9 +60,9 @@ func (p *Peer2PeerBackend) Init(cb ggponet.GGPOSessionCallbacks, gamename string
 	p.Callbacks.BeginGame(gamename)
 }
 
-func (p *Peer2PeerBackend) AddRemotePlayer(player *ggponet.GGPOPlayer, queue int64) {
+func (p *Peer2PeerBackend) AddRemotePlayer(player *ggponet.GGPOPlayer, localPort string, queue int64) {
 	p.Synchronizing = true
-	p.Endpoints[queue].Init(*player, queue, p.LocalConnectStatus, &p.Poll)
+	p.Endpoints[queue].Init(*player, localPort, queue, p.LocalConnectStatus, &p.Poll)
 	if p.MustHostConnection(queue) {
 		p.Endpoints[queue].HostConnection()
 	} else {
@@ -371,7 +373,7 @@ func (p *Peer2PeerBackend) AddPlayer(player *ggponet.GGPOPlayer, handle *ggponet
 	*handle = p.QueueToPlayerHandle(queue)
 
 	if player.Type == ggponet.GGPO_PLAYERTYPE_REMOTE {
-		p.AddRemotePlayer(player, queue)
+		p.AddRemotePlayer(player, p.LocalPort, queue)
 	} else {
 		p.LocalPlayerIndex = queue
 	}

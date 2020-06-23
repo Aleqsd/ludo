@@ -16,7 +16,7 @@ var syncTest = false
 
 const FRAME_DELAY = 2 //TODO: Make frame delay depends on local network connection
 
-func Init(numPlayers int64, players []ggponet.GGPOPlayer, numSpectators int64, test bool) {
+func Init(numPlayers int64, players []ggponet.GGPOPlayer, localPort string, numSpectators int64, test bool) {
 	var result ggponet.GGPOErrorCode
 	syncTest = test
 
@@ -31,7 +31,7 @@ func Init(numPlayers int64, players []ggponet.GGPOPlayer, numSpectators int64, t
 		//result = ggpo.StartSynctest(&ggpoSession, &cb, "ludo", num_players, sizeof(int), 1)
 	} else {
 		//TODO: Define optimal input size (default ActionLast)
-		result = ggpo.StartSession(&ggpoSession, cb, "ludo", numPlayers, int64(local.ActionLast))
+		result = ggpo.StartSession(&ggpoSession, cb, "ludo", numPlayers, int64(local.ActionLast), localPort)
 	}
 
 	// automatically disconnect clients after 3000 ms and start our count-down timer
