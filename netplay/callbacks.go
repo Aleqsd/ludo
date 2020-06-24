@@ -25,7 +25,7 @@ func (c *Callbacks) BeginGame(game string) bool {
 }
 
 func (c *Callbacks) SaveGameState(buffer []byte, len *int64, checksum *int64, frame int64) {
-	logrus.Info("===================== Save Game State ==========================")
+	logrus.Info("Saving Game State")
 	var err error
 	buffer, err = state.Global.Core.Serialize(uint(*len))
 	if err != nil {
@@ -35,7 +35,7 @@ func (c *Callbacks) SaveGameState(buffer []byte, len *int64, checksum *int64, fr
 }
 
 func (c *Callbacks) LoadGameState(buffer []byte, len int64) {
-	logrus.Info("===================== Load Game State ==========================")
+	logrus.Info("Loading Game State")
 	if len > 0 {
 		err := state.Global.Core.Unserialize(buffer, uint(len))
 		if err != nil {
@@ -45,7 +45,7 @@ func (c *Callbacks) LoadGameState(buffer []byte, len int64) {
 }
 
 func (c *Callbacks) LogGameState(filename string, buffer *byte, len int64) {
-	//TODO: Remove?
+	//TODO: Remove? Usefull only in synctest
 }
 
 func (c *Callbacks) AdvanceFrame(flags int64) {

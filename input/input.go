@@ -71,8 +71,6 @@ var vid *video.Video
 func Init(v *video.Video) {
 	vid = v
 	glfw.SetJoystickCallback(joystickCallback)
-
-	//localPlayerInput = [delay.Delay][20]bool{}
 }
 
 // Resets all retropad buttons to false

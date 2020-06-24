@@ -86,8 +86,6 @@ type Netplay struct {
 	IsInitialized         bool
 }
 
-var LocalPort = "8009"
-
 func (n *Netplay) Init(remotePlayer ggponet.GGPOPlayer, localPort string, queue int64, status []ggponet.ConnectStatus, poll *lib.Poll) {
 	n.LocalAddr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%s", localPort))
 	n.RemoteAddr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", remotePlayer.IPAddress, int(remotePlayer.Port)))
